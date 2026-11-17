@@ -1,0 +1,464 @@
+
+\section{PHƯƠNG PHÁP ĐỀ XUẤT}
+
+\subsection{Phát biểu bài toán}
+
+Trong đồ án này, chúng tôi tập trung nghiên cứu bài toán dịch máy đa ngôn ngữ sử dụng mô hình ngôn ngữ lớn (Large Language Models -- LLMs), với mục tiêu cải thiện chất lượng dịch giữa nhiều cặp ngôn ngữ khác nhau. Mặc dù các LLM hiện đại có khả năng xử lý nhiều ngôn ngữ trong cùng một mô hình, hiệu năng dịch vẫn có sự khác biệt đáng kể giữa các hướng dịch. Đặc biệt, mô hình thường gặp khó khăn khi dịch giữa những ngôn ngữ có mức độ tài nguyên hạn chế hoặc không có sự hỗ trợ trực tiếp tốt trong quá trình huấn luyện \cite{zhu-etal-2024-multilingual}.
+
+Xét một câu nguồn $x$ thuộc ngôn ngữ $s$ và yêu cầu dịch sang ngôn ngữ đích $t$. Mục tiêu của hệ thống là sinh ra câu dịch $y$ sao cho nội dung ngữ nghĩa của câu nguồn được bảo toàn, đồng thời câu đầu ra có tính tự nhiên và phù hợp với ngôn ngữ đích.
+
+Với mô hình ngôn ngữ lớn có tham số $\Phi$, phương pháp dịch trực tiếp (Direct Prompting) có thể được biểu diễn dưới dạng:
+
+\begin{equation}
+	y^{\mathrm{direct}}
+	=
+	\arg\max_y P_{\Phi}(y\mid x,s,t),
+\end{equation}
+
+trong đó $P_{\Phi}$ là phân phối xác suất do mô hình xác định, còn thông tin $s$ và $t$ được cung cấp thông qua chỉ dẫn trong prompt. Trong thực tế, quá trình sinh được thực hiện theo cơ chế tự hồi quy, tức là mô hình lần lượt dự đoán từng token của câu đích dựa trên câu nguồn và các token đã sinh trước đó.
+
+Tuy nhiên, chất lượng dịch trực tiếp có thể chưa tối ưu đối với một số hướng dịch. Nguyên nhân có thể đến từ sự mất cân bằng dữ liệu đa ngôn ngữ, mức độ tương đồng giữa các ngôn ngữ và khả năng chuyển giao tri thức không đồng đều giữa các cặp ngôn ngữ. Một hướng tiếp cận có thể khai thác là sử dụng các ngôn ngữ trung gian (pivot languages) để cung cấp thêm thông tin hỗ trợ cho quá trình dịch.
+
+Gọi $\mathcal{L}$ là tập hợp các ngôn ngữ được mô hình hỗ trợ. Với một hướng dịch từ $s$ sang $t$, tập hợp các ngôn ngữ trung gian ứng viên được xác định bởi:
+
+\begin{equation}
+	\mathcal{P}(s,t)
+	=
+	\mathcal{L}\setminus\{s,t\}.
+\end{equation}
+
+Với mỗi ngôn ngữ trung gian $p\in\mathcal{P}(s,t)$, hệ thống thực hiện quá trình dịch hai bước:
+
+\begin{equation}
+	x
+	\xrightarrow{s\rightarrow p}
+	y_p
+	\xrightarrow{p\rightarrow t}
+	\hat{y}_p,
+\end{equation}
+
+trong đó $y_p$ là bản dịch trung gian sang ngôn ngữ $p$, còn $\hat{y}_p$ là bản dịch tiếp theo từ $p$ sang ngôn ngữ đích $t$.
+
+Thay vì phụ thuộc vào một ngôn ngữ trung gian cố định, đồ án đề xuất khai thác nhiều pivot khác nhau. Các bản dịch được tạo qua những pivot này đóng vai trò là thông tin tham chiếu bổ trợ cho quá trình sinh bản dịch cuối cùng. Tuy nhiên, không phải mọi bản dịch trung gian đều có chất lượng tốt. Việc đưa trực tiếp tất cả các bản dịch vào prompt có thể khiến mô hình tiếp nhận những thông tin sai lệch, dẫn đến hiện tượng lan truyền lỗi hoặc sinh nội dung không có trong câu nguồn.
+
+Từ yêu cầu trên, bài toán nghiên cứu được chia thành hai mục tiêu chính:
+
+\begin{itemize}
+	\item \textbf{Mục tiêu thứ nhất:} Xây dựng phương pháp khai thác nhiều ngôn ngữ trung gian, lựa chọn các pivot phù hợp, tạo các bản dịch ứng viên và tổng hợp những ứng viên có chất lượng tốt để hỗ trợ quá trình dịch cuối cùng.
+	
+	\item \textbf{Mục tiêu thứ hai:} Phân tích những thay đổi trong biểu diễn nội tại của LLM khi tiếp nhận thông tin từ nhiều bản dịch pivot, từ đó xây dựng phương pháp điều hướng activation nhằm tái tạo lợi ích của phương pháp prompting mà không cần sinh các bản dịch trung gian trong quá trình suy luận.
+\end{itemize}
+
+Để giải quyết hai mục tiêu này, đồ án đề xuất hai phương pháp liên kết với nhau: Multi-Pivot Prompting (MPP) và Multi-Pivot Representation Steering (MPRS). MPP khai thác trực tiếp các bản dịch qua nhiều ngôn ngữ trung gian, trong khi MPRS học cách chuyển hóa những thông tin hữu ích từ MPP vào không gian biểu diễn nội tại của mô hình.
+
+\subsection{Phương pháp Multi-Pivot Prompting (MPP)}
+
+Multi-Pivot Prompting (MPP) là phương pháp prompting được đề xuất nhằm cải thiện chất lượng dịch máy đa ngôn ngữ bằng cách sử dụng nhiều ngôn ngữ trung gian thay vì chỉ phụ thuộc vào một pivot cố định. Phương pháp khai thác các bản dịch được tạo qua những ngôn ngữ trung gian khác nhau như các thông tin tham chiếu bổ trợ, giúp LLM có thêm tín hiệu từ vựng, ngữ nghĩa và cú pháp khi sinh bản dịch cuối cùng.
+
+MPP không yêu cầu cập nhật tham số của mô hình ngôn ngữ lớn. Thay vào đó, phương pháp sử dụng khả năng dịch có sẵn của mô hình để tạo các bản dịch ứng viên, đánh giá chất lượng của chúng và lựa chọn những ứng viên phù hợp để đưa vào prompt cuối cùng.
+
+Quy trình MPP bao gồm ba giai đoạn chính:
+
+\begin{enumerate}
+	\item Lựa chọn ngôn ngữ trung gian (Pivot Selection).
+	\item Sinh các bản dịch ứng viên qua pivot (Pivot Candidate Generation).
+	\item Lọc và tổng hợp các ứng viên (Candidate Aggregation).
+\end{enumerate}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=\textwidth]{figures/Multipivot.drawio.pdf}
+	\caption{Tổng quan quy trình hoạt động của phương pháp Multi-Pivot Prompting.}
+	\label{fig:mpp-pipeline}
+\end{figure}
+
+\subsubsection*{Lựa chọn ngôn ngữ trung gian}
+
+Mục tiêu của giai đoạn này là xác định những ngôn ngữ có khả năng đóng vai trò pivot hiệu quả đối với một hướng dịch cụ thể. Việc lựa chọn pivot có ý nghĩa quan trọng bởi chất lượng của quá trình dịch hai bước phụ thuộc vào cả hai chặng: từ ngôn ngữ nguồn sang ngôn ngữ trung gian và từ ngôn ngữ trung gian sang ngôn ngữ đích.
+
+Một khó khăn trong việc lựa chọn pivot là thông tin về phân bố ngôn ngữ trong dữ liệu tiền huấn luyện của nhiều LLM không được công bố đầy đủ. Do đó, khó có thể xác định chính xác mức độ hỗ trợ của mô hình đối với từng cặp ngôn ngữ chỉ dựa trên thông tin huấn luyện.
+
+Để giải quyết vấn đề này, MPP sử dụng phương pháp đánh giá thực nghiệm. Cụ thể, chất lượng dịch trực tiếp giữa các cặp ngôn ngữ được đánh giá bằng chỉ số COMET trên tập phát triển của FLORES-200. Kết quả đánh giá tạo thành một bảng điểm chất lượng dịch theo từng cặp ngôn ngữ.
+
+Gọi $Q(a,b)$ là điểm chất lượng dịch trực tiếp từ ngôn ngữ $a$ sang ngôn ngữ $b$, được ước lượng bằng COMET. Với một hướng dịch từ ngôn ngữ nguồn $s$ sang ngôn ngữ đích $t$, điểm của một pivot ứng viên $p$ được xác định như sau:
+
+\begin{equation}
+	S(s,p,t)
+	=
+	w_{sp}Q(s,p)
+	+
+	w_{pt}Q(p,t),
+	\label{eq:pivot-score}
+\end{equation}
+
+trong đó:
+
+\begin{itemize}
+	\item $Q(s,p)$ biểu thị chất lượng dịch từ ngôn ngữ nguồn $s$ sang ngôn ngữ trung gian $p$.
+	\item $Q(p,t)$ biểu thị chất lượng dịch từ ngôn ngữ trung gian $p$ sang ngôn ngữ đích $t$.
+	\item $w_{sp}$ và $w_{pt}$ lần lượt là trọng số của hai giai đoạn dịch.
+\end{itemize}
+
+Trong phương pháp đề xuất, hai trọng số được thiết lập như sau:
+
+\begin{equation}
+	w_{sp}=0.3,\qquad w_{pt}=0.7.
+\end{equation}
+
+Việc gán trọng số lớn hơn cho giai đoạn từ pivot sang ngôn ngữ đích xuất phát từ vai trò trực tiếp của giai đoạn này đối với chất lượng bản dịch cuối cùng. Một pivot tốt không chỉ cần bảo toàn được nội dung của câu nguồn mà còn phải hỗ trợ mô hình tạo ra bản dịch có chất lượng cao trong ngôn ngữ đích.
+
+Sau khi tính điểm cho các pivot ứng viên, hệ thống sắp xếp chúng theo thứ tự giảm dần của $S(s,p,t)$. Hai ngôn ngữ nguồn và đích được loại khỏi danh sách pivot. Các ngôn ngữ có điểm cao hơn được ưu tiên sử dụng trong giai đoạn tạo bản dịch ứng viên.
+
+\subsubsection*{Sinh các bản dịch ứng viên qua pivot}
+
+Sau khi hoàn thành bước lựa chọn pivot, MPP tiến hành tạo tập hợp các bản dịch ứng viên cho hướng dịch đang xét.
+
+Trước tiên, hệ thống thực hiện dịch trực tiếp từ ngôn ngữ nguồn sang ngôn ngữ đích để tạo bản dịch cơ sở:
+
+\begin{equation}
+	\hat{y}_{\mathrm{direct}}
+	=
+	\mathrm{LLM}(x,s\rightarrow t).
+\end{equation}
+
+Tiếp theo, với mỗi pivot $p$ đã được lựa chọn, hệ thống thực hiện hai lần suy luận:
+
+\begin{equation}
+	y_p
+	=
+	\mathrm{LLM}(x,s\rightarrow p),
+\end{equation}
+
+\begin{equation}
+	\hat{y}_p
+	=
+	\mathrm{LLM}(y_p,p\rightarrow t).
+\end{equation}
+
+Trong đó, $y_p$ là câu được dịch từ ngôn ngữ nguồn sang ngôn ngữ trung gian, còn $\hat{y}_p$ là kết quả dịch từ ngôn ngữ trung gian sang ngôn ngữ đích.
+
+Như vậy, tập hợp ứng viên ban đầu bao gồm một bản dịch trực tiếp và nhiều bản dịch được tạo qua các pivot khác nhau:
+
+\begin{equation}
+	\mathcal{C}
+	=
+	\{\hat{y}_{\mathrm{direct}}\}
+	\cup
+	\{\hat{y}_p\mid p\in\mathcal{P}_{\mathrm{selected}}\}.
+\end{equation}
+
+Việc tạo nhiều bản dịch ứng viên giúp hệ thống khai thác các cách diễn đạt và tín hiệu ngữ nghĩa khác nhau. Mỗi pivot có thể cung cấp một góc nhìn khác nhau về nội dung câu nguồn, qua đó bổ sung thông tin hữu ích cho quá trình tạo bản dịch cuối cùng.
+
+Tuy nhiên, quá trình dịch qua pivot cũng có thể làm phát sinh lỗi. Nếu bản dịch từ ngôn ngữ nguồn sang pivot không chính xác, những lỗi này có thể tiếp tục được truyền sang bản dịch ở ngôn ngữ đích. Các lỗi có thể biểu hiện dưới dạng thiếu thông tin, sai lệch ngữ nghĩa hoặc bổ sung những nội dung không xuất hiện trong câu nguồn.
+
+Vì vậy, MPP không sử dụng trực tiếp toàn bộ các bản dịch ứng viên mà thực hiện thêm một bước đánh giá và lọc chất lượng.
+
+\subsubsection*{Lọc và tổng hợp các ứng viên}
+
+Để hạn chế ảnh hưởng của những bản dịch pivot có chất lượng thấp, MPP sử dụng COMETKiwi-DA làm phương pháp ước lượng chất lượng dịch không tham chiếu (Reference-free Quality Estimation).
+
+Khác với COMET được sử dụng ở giai đoạn lựa chọn pivot trên tập phát triển, COMETKiwi-DA được sử dụng để đánh giá từng bản dịch ứng viên trong quá trình xử lý câu đầu vào. Phương pháp này cho phép ước lượng chất lượng bản dịch mà không cần cung cấp bản dịch tham chiếu do con người tạo ra.
+
+Gọi $R(\hat{y})$ là điểm chất lượng được COMETKiwi-DA ước lượng cho bản dịch $\hat{y}$. MPP so sánh điểm của từng bản dịch pivot với điểm của bản dịch trực tiếp. Một ứng viên pivot chỉ được giữ lại nếu điểm chất lượng của nó lớn hơn điểm chất lượng của bản dịch trực tiếp:
+
+\begin{equation}
+	\mathrm{Keep}(\hat{y}_p)
+	=
+	\begin{cases}
+		1, & \text{nếu } R(\hat{y}_p)>
+		R(\hat{y}_{\mathrm{direct}}),\\
+		0, & \text{ngược lại}.
+	\end{cases}
+	\label{eq:mpp-filter}
+\end{equation}
+
+Điều kiện này giúp loại bỏ những bản dịch pivot không thể hiện được chất lượng tốt hơn kết quả dịch trực tiếp. Nhờ đó, các bản dịch trung gian có chất lượng thấp ít có khả năng gây ảnh hưởng tiêu cực đến quá trình sinh đầu ra cuối cùng.
+
+Sau bước lọc, nếu không còn bản dịch pivot nào được giữ lại, hệ thống sử dụng phương án dự phòng là trả về bản dịch trực tiếp:
+
+\begin{equation}
+	y_{\mathrm{final}}
+	=
+	\hat{y}_{\mathrm{direct}}.
+\end{equation}
+
+Ngược lại, nếu tồn tại các bản dịch pivot đạt yêu cầu, hệ thống sắp xếp chúng theo điểm COMETKiwi-DA và lựa chọn tối đa ba ứng viên có điểm cao nhất. Những bản dịch được lựa chọn sẽ được đưa vào prompt cùng với câu nguồn và điểm chất lượng tương ứng.
+
+Có thể biểu diễn tập hợp các bản dịch được lựa chọn như sau:
+
+\begin{equation}
+	\mathcal{R}
+	=
+	\mathrm{Top3}
+	\left(
+	\left\{
+	\hat{y}_p
+	\mid
+	R(\hat{y}_p)>
+	R(\hat{y}_{\mathrm{direct}})
+	\right\}
+	\right).
+\end{equation}
+
+Trong bước suy luận cuối cùng, LLM tiếp nhận câu nguồn, thông tin về ngôn ngữ đích và các bản dịch pivot đã được lựa chọn. Mỗi bản dịch tham chiếu đi kèm với điểm chất lượng tương ứng để mô hình có thêm cơ sở đánh giá mức độ tin cậy của thông tin bổ trợ.
+
+Bản dịch cuối cùng được sinh dựa trên câu nguồn kết hợp với tập hợp tham chiếu:
+
+\begin{equation}
+	y_{\mathrm{final}}
+	=
+	\mathrm{LLM}
+	\left(
+	x,s,t,\mathcal{R}
+	\right).
+\end{equation}
+
+Điểm quan trọng trong thiết kế này là câu nguồn vẫn được cung cấp trực tiếp cho mô hình trong bước sinh cuối cùng. Các bản dịch pivot chỉ đóng vai trò thông tin bổ trợ, không thay thế câu nguồn. Điều này giúp mô hình có thể đối chiếu thông tin tham chiếu với nội dung ban đầu, hạn chế sự phụ thuộc hoàn toàn vào những bản dịch trung gian.
+
+Nhìn chung, MPP kết hợp ba cơ chế: lựa chọn pivot dựa trên chất lượng dịch thực nghiệm, tạo nhiều bản dịch ứng viên và lọc ứng viên bằng ước lượng chất lượng không tham chiếu. Cách tiếp cận này giúp tận dụng lợi thế của nhiều đường dịch khác nhau, đồng thời giảm ảnh hưởng của những bản dịch trung gian không đáng tin cậy.
+
+
+\subsection{Phân tích cơ chế hoạt động của Multi-Pivot Prompting}
+
+Để tìm hiểu cơ chế bên trong mô hình ngôn ngữ lớn khi thực hiện dịch máy với Multi-Pivot Prompting (MPP), chúng tôi kế thừa khung phân tích cơ chế được đề xuất trong nghiên cứu \textit{Exploring the Translation Mechanism of Large Language Models} \cite{zhang2026exploring}. Nghiên cứu này đưa ra một phương pháp phân tích nhằm xác định các thành phần tính toán bên trong mô hình có vai trò quan trọng đối với quá trình dịch máy. Cụ thể, phương pháp sử dụng các cặp đầu vào tương phản để xác định sự thay đổi trong biểu diễn nội bộ của mô hình, sau đó áp dụng kỹ thuật can thiệp vào đường truyền thông tin nhằm đánh giá mức độ đóng góp của từng thành phần đối với kết quả dịch.
+
+Dựa trên khung phân tích nói trên, chúng tôi điều chỉnh cách xây dựng cặp đầu vào tương phản để phù hợp với mục tiêu nghiên cứu tác động của MPP. Thay vì sử dụng cặp prompt phân biệt giữa trường hợp có và không có tín hiệu dịch như trong nghiên cứu trước, chúng tôi xây dựng cặp prompt dựa trên hai chiến lược dịch máy khác nhau: dịch trực tiếp (Direct Prompting) và dịch sử dụng nhiều ngôn ngữ trung gian (Multi-Pivot Prompting). Cụ thể, hai đầu vào tương phản được xác định như sau:
+
+\begin{equation}
+	\begin{aligned}
+		x^- &= \mathrm{DirectPrompt}(s), \\
+		x^+ &= \mathrm{MultiPivotPrompt}(s, P),
+	\end{aligned}
+\end{equation}
+
+trong đó, $s$ là câu nguồn và $P = \{p_1, p_2, \ldots, p_k\}$ là tập các ngôn ngữ trung gian được lựa chọn. $x^-$ biểu diễn prompt dịch trực tiếp từ ngôn ngữ nguồn sang ngôn ngữ đích, trong khi $x^+$ biểu diễn prompt MPP có bổ sung các bản dịch ứng viên được tạo thông qua những ngôn ngữ trung gian. Việc thiết kế cặp tương phản theo cách này cho phép chúng tôi tập trung phân tích những thay đổi trong biểu diễn nội bộ xuất phát từ việc bổ sung thông tin dịch thông qua các ngôn ngữ trung gian.
+
+Bên cạnh việc điều chỉnh cách xây dựng cặp prompt, chúng tôi cũng mở rộng phạm vi phân tích từ từng hướng dịch riêng lẻ sang nhóm các hướng dịch có chung ngôn ngữ đích, ký hiệu là $X \rightarrow tgt$. Trong đó, $X$ là tập hợp các ngôn ngữ nguồn khác nhau và $tgt$ là ngôn ngữ đích chung. Cách nhóm này được lựa chọn dựa trên nhận định từ nghiên cứu trước rằng các hướng dịch có chung ngôn ngữ nguồn hoặc ngôn ngữ đích có thể chia sẻ một số thành phần quan trọng trong quá trình xử lý của mô hình \cite{zhang2026exploring}. Đối với bài toán của chúng tôi, các prompt thuộc cùng một nhóm đều hướng đến một ngôn ngữ đích và chứa các ứng viên dịch được biểu diễn trong ngôn ngữ đó. Do vậy, việc phân tích theo nhóm $X \rightarrow tgt$ giúp khảo sát những thành phần có vai trò trong quá trình xử lý thông tin ứng viên ở phía ngôn ngữ đích, thay vì chỉ tập trung vào đặc trưng của một ngôn ngữ nguồn cụ thể.
+
+Sau khi xây dựng các cặp prompt tương phản, chúng tôi tính toán độ chênh lệch kích hoạt tại từng thành phần $c$ trong mô hình như sau:
+
+\begin{equation}
+	\Delta a_c = a_c(x^+) - a_c(x^-),
+\end{equation}
+
+trong đó, $a_c(\cdot)$ là vector kích hoạt của thành phần $c$ tại vị trí token cuối cùng của prompt. Đại lượng $\Delta a_c$ thể hiện sự thay đổi trong biểu diễn nội bộ khi chuyển từ chiến lược dịch trực tiếp sang chiến lược MPP. Những thay đổi này được sử dụng làm cơ sở để xác định các thành phần có phản ứng đáng kể với thông tin bổ sung từ các bản dịch trung gian.
+
+Tuy nhiên, sự thay đổi trong giá trị kích hoạt chưa đủ để kết luận rằng một thành phần có vai trò nhân quả đối với chất lượng dịch. Vì vậy, kế thừa phương pháp phân tích trong nghiên cứu trước \cite{zhang2026exploring}, chúng tôi tiếp tục sử dụng kỹ thuật \textit{Subspace-Intervened Path Patching} để đánh giá mức độ đóng góp của từng thành phần. Cụ thể, kỹ thuật này can thiệp vào đường truyền thông tin của mô hình thông qua các biểu diễn được xác định từ cặp đầu vào tương phản, từ đó đánh giá ảnh hưởng của thành phần được can thiệp lên quá trình dự đoán bản dịch. Mức độ ảnh hưởng được đo lường thông qua sự thay đổi của perplexity (PPL) trên câu dịch mục tiêu. Thành phần gây ra thay đổi PPL lớn hơn được xem là có ảnh hưởng đáng kể hơn đến quá trình xử lý thông tin dịch.
+
+Cuối cùng, dựa trên kết quả phân tích, chúng tôi xếp hạng các thành phần theo mức độ thay đổi perplexity và lựa chọn 5\% thành phần có ảnh hưởng lớn nhất, bao gồm các Attention Head và lớp MLP, làm tập thành phần quan trọng cho bước điều hướng biểu diễn tiếp theo. Việc lựa chọn một tập thành phần có kích thước giới hạn cũng phù hợp với kết quả phân tích trong nghiên cứu trước, cho thấy các thành phần quan trọng đối với quá trình dịch máy của LLM có tính thưa và chỉ tập trung ở một phần nhỏ trong toàn bộ mô hình \cite{zhang2026exploring}.
+
+Như vậy, phương pháp phân tích trong đồ án kế thừa khung xác định thành phần quan trọng và đánh giá tác động nhân quả từ nghiên cứu trước, đồng thời điều chỉnh cặp đầu vào tương phản từ sự khác biệt về tín hiệu dịch sang sự khác biệt giữa hai chiến lược Direct Prompting và Multi-Pivot Prompting. Kết quả phân tích này là cơ sở để xác định các thành phần nội bộ cần được điều hướng trong phương pháp Multi-Pivot Representation Steering (MPRS) được trình bày ở phần tiếp theo.
+
+
+\subsection{Phương pháp Multi-Pivot Representation Steering (MPRS)}
+
+\subsubsection*{Ý tưởng phương pháp}
+
+Mặc dù MPP có khả năng cải thiện chất lượng dịch thông qua việc bổ sung các bản dịch tham chiếu, phương pháp này yêu cầu thực hiện thêm nhiều bước suy luận. Cụ thể, hệ thống phải sinh bản dịch qua các ngôn ngữ pivot, đánh giá chất lượng của từng ứng viên và đưa những kết quả phù hợp vào prompt cuối cùng. Điều này làm tăng chi phí tính toán và độ trễ trong quá trình suy luận.
+
+Để khắc phục hạn chế trên, đồ án đề xuất Multi-Pivot Representation Steering (MPRS). Đây là phương pháp điều hướng activation nhằm xấp xỉ tác động của MPP trực tiếp trong không gian biểu diễn nội tại của LLM.
+
+Ý tưởng chính của MPRS là sử dụng các bản dịch chất lượng cao do MPP tạo ra làm tín hiệu mục tiêu trong quá trình huấn luyện. Thay vì yêu cầu mô hình tạo các bản dịch pivot trong mỗi lần suy luận, MPRS huấn luyện những mạng MLP nhỏ để biến đổi activation của các thành phần quan trọng, hướng chúng đến những biểu diễn có liên quan đến kết quả dịch được cải thiện bởi MPP.
+
+MPRS chỉ can thiệp vào những thành phần đã được lựa chọn thông qua phân tích cơ chế ở mục 3.3. Các thành phần còn lại của mô hình được giữ nguyên. Nhờ đó, phương pháp hạn chế phạm vi can thiệp và không yêu cầu cập nhật toàn bộ tham số của LLM nền.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.9\textwidth]{figures/EMNLP.drawio-3.pdf}
+	\caption{Tổng quan phương pháp Multi-Pivot Representation Steering.}
+	\label{fig:mprs}
+\end{figure}
+
+\subsubsection*{Tạo dữ liệu mục tiêu từ Multi-Pivot Prompting}
+
+Để huấn luyện MPRS, trước tiên cần xây dựng dữ liệu mục tiêu phản ánh hành vi dịch của MPP.
+
+Với mỗi câu nguồn $x$, hệ thống sử dụng MPP để tạo ra một bản dịch mục tiêu giả lập, được ký hiệu là $\hat{y}^{+}$. Bản dịch này đóng vai trò là tín hiệu giám sát cho quá trình huấn luyện các mạng điều hướng.
+
+Có thể biểu diễn quá trình tạo dữ liệu như sau:
+
+\begin{equation}
+	\hat{y}^{+}
+	=
+	\mathrm{MPP}(x,s,t).
+\end{equation}
+
+Ở đây, $\hat{y}^{+}$ là chuỗi đầu ra được tạo bởi MPP sau khi thực hiện lựa chọn pivot, sinh các bản dịch ứng viên và tổng hợp thông tin tham chiếu.
+
+Điểm quan trọng là dữ liệu mục tiêu không cần được tạo thủ công. Mô hình MPP tự động sinh các bản dịch giả lập, từ đó cung cấp tín hiệu huấn luyện cho MPRS. Trong quá trình huấn luyện, các tham số của LLM nền được giữ cố định; chỉ những mạng MLP điều hướng được tối ưu hóa.
+
+\subsubsection*{Thiết kế mạng điều hướng activation}
+
+Giả sử sau bước phân tích cơ chế, hệ thống lựa chọn được $K$ thành phần quan trọng:
+
+\begin{equation}
+	\mathcal{C}_{\mathrm{selected}}
+	=
+	\{c_1,c_2,\ldots,c_K\}.
+\end{equation}
+
+Với mỗi thành phần $c_i$, MPRS xây dựng một mạng MLP điều hướng riêng biệt $F_i$, có tham số $\phi_i$.
+
+Tại bước sinh thứ $t$, activation của thành phần $c_i$ được ký hiệu là:
+
+\begin{equation}
+	a_{c_i}^{t}
+	\left(x^-,\hat{y}_{<t}^{+}\right),
+\end{equation}
+
+trong đó:
+
+\begin{itemize}
+	\item $x^-$ biểu thị đầu vào sử dụng Direct Prompting.
+	\item $\hat{y}_{<t}^{+}$ là phần tiền tố của chuỗi mục tiêu MPP, bao gồm các token từ vị trí đầu tiên đến vị trí $t-1$.
+	\item $a_{c_i}^{t}$ là activation của thành phần $c_i$ tại vị trí sinh thứ $t$.
+\end{itemize}
+
+Mạng MLP $F_i$ nhận activation hiện tại làm đầu vào và dự đoán một phần biến đổi bổ sung. Activation sau điều hướng được tính bằng phép biến đổi có kết nối dư (Residual Transformation):
+
+\begin{equation}
+	\begin{aligned}
+		\tilde{a}_{c_i}^{t}
+		&=
+		a_{c_i}^{t}
+		\left(x^-,\hat{y}_{<t}^{+}\right)\\
+		&\quad+
+		F_i\left(
+		a_{c_i}^{t}
+		\left(x^-,\hat{y}_{<t}^{+}\right)
+		\right),
+	\end{aligned}
+	\label{eq:mprs-training}
+\end{equation}
+
+với $i=1,\ldots,K$.
+
+Trong công thức trên, $\tilde{a}_{c_i}^{t}$ là activation sau điều hướng, còn $F_i(\cdot)$ là phần biến đổi được mạng MLP học từ dữ liệu huấn luyện.
+
+Việc sử dụng kết nối dư giúp giữ lại activation ban đầu và chỉ bổ sung phần biến đổi cần thiết. Do đó, MPRS không thay thế hoàn toàn biểu diễn của mô hình nền mà điều chỉnh biểu diễn hiện có theo hướng có lợi cho quá trình dịch.
+
+Mỗi thành phần quan trọng được gán một mạng MLP riêng. Cách thiết kế này cho phép mô hình học những phép biến đổi khác nhau tùy theo vai trò của từng Attention Head hoặc lớp MLP, thay vì áp dụng một phép biến đổi chung cho toàn bộ mạng.
+
+\subsubsection*{Huấn luyện MPRS}
+
+Sau khi xây dựng các mạng điều hướng, MPRS tiến hành tối ưu hóa các tham số của chúng thông qua hàm mất mát Cross-Entropy ở cấp độ token.
+
+Gọi $\Phi$ là tập tham số của LLM nền và $\phi=\{\phi_i\}_{i=1}^{K}$ là tập tham số của các mạng điều hướng. Trong quá trình huấn luyện, $\Phi$ được giữ cố định, trong khi $\phi$ được cập nhật để mô hình sinh ra chuỗi mục tiêu $\hat{y}^{+}$.
+
+Quá trình huấn luyện sử dụng Teacher Forcing. Tại mỗi bước $t$, mô hình nhận câu nguồn và phần tiền tố thực tế của chuỗi mục tiêu $\hat{y}_{<t}^{+}$, sau đó dự đoán token tiếp theo $\hat{y}_{t}^{+}$.
+
+Hàm mất mát được xác định như sau:
+
+\begin{equation}
+	\min_{\phi}\mathcal{L}_{\mathrm{CE}}
+	=
+	-\sum_{t=1}^{m}
+	\log
+	p_{\Phi,\phi}
+	\left(
+	\hat{y}_{t}^{+}
+	\mid
+	x^-,
+	\hat{y}_{<t}^{+}
+	\right),
+	\label{eq:mprs-loss}
+\end{equation}
+
+trong đó:
+
+\begin{itemize}
+	\item $m$ là độ dài chuỗi mục tiêu.
+	\item $\hat{y}_{t}^{+}$ là token mục tiêu tại vị trí $t$.
+	\item $p_{\Phi,\phi}$ là phân phối xác suất đầu ra của mô hình khi sử dụng các activation đã được điều hướng.
+	\item $\Phi$ là tham số cố định của LLM nền.
+	\item $\phi$ là tập tham số cần tối ưu của các mạng MLP điều hướng.
+\end{itemize}
+
+Thông qua việc tối thiểu hóa hàm mất mát, các mạng MLP học cách điều chỉnh activation sao cho mô hình có xu hướng dự đoán chuỗi mục tiêu do MPP tạo ra. Như vậy, lợi ích từ những thông tin tham chiếu đa pivot được chuyển hóa thành các phép biến đổi trên biểu diễn nội tại của mô hình.
+
+Điểm khác biệt quan trọng so với fine-tuning truyền thống là quá trình tối ưu chỉ cập nhật các tham số điều hướng $\phi$. Toàn bộ tham số của LLM nền $\Phi$ được giữ nguyên. Điều này giúp giảm số lượng tham số cần huấn luyện và hạn chế sự can thiệp vào năng lực đã có của mô hình.
+
+\subsubsection*{Suy luận với MPRS}
+
+Sau khi hoàn thành huấn luyện, MPRS được sử dụng trong quá trình suy luận mà không cần tạo các bản dịch trung gian.
+
+Khác với MPP, MPRS chỉ sử dụng Direct Prompting làm đầu vào. Khi mô hình bắt đầu sinh bản dịch, các mạng MLP điều hướng được áp dụng lên activation của những thành phần đã lựa chọn ở từng bước sinh.
+
+Tại bước $t$, activation của thành phần $c_i$ được tính từ câu nguồn và phần tiền tố đã thực sự được sinh ra, ký hiệu là $y_{<t}$:
+
+\begin{equation}
+	\begin{aligned}
+		\tilde{a}_{c_i}^{t}
+		&=
+		a_{c_i}^{t}(x^-,y_{<t})\\
+		&\quad+
+		F_i\left(
+		a_{c_i}^{t}(x^-,y_{<t})
+		\right),
+	\end{aligned}
+	\label{eq:mprs-inference}
+\end{equation}
+
+với $i=1,\ldots,K$.
+
+Ở đây, $y_{<t}$ là các token đã được mô hình sinh ra trước bước hiện tại. Phép biến đổi activation được áp dụng lặp lại trong quá trình sinh tự hồi quy, trước khi mô hình dự đoán token tiếp theo.
+
+Nhờ đó, MPRS có thể điều chỉnh hoạt động của mô hình trong suốt quá trình tạo bản dịch, thay vì chỉ tác động một lần tại thời điểm tiếp nhận prompt.
+
+Quá trình suy luận có thể được mô tả qua các bước:
+
+\begin{enumerate}
+	\item Tiếp nhận câu nguồn và chỉ dẫn dịch trực tiếp.
+	\item Đưa đầu vào qua LLM nền với các tham số $\Phi$ được giữ cố định.
+	\item Tại những thành phần đã lựa chọn, trích xuất activation và áp dụng mạng MLP điều hướng tương ứng.
+	\item Sử dụng activation sau điều hướng để tiếp tục tính toán phân phối xác suất của token tiếp theo.
+	\item Sinh token tiếp theo và cập nhật ngữ cảnh.
+	\item Lặp lại quá trình cho đến khi hoàn thành bản dịch.
+\end{enumerate}
+
+Có thể thấy, MPRS không cần mở rộng prompt bằng các bản dịch tham chiếu và cũng không cần thực hiện thêm các lượt giải mã cho từng ngôn ngữ pivot trong quá trình suy luận. Thay vào đó, thông tin hữu ích được học từ dữ liệu mục tiêu do MPP tạo ra và được sử dụng thông qua các phép biến đổi activation.
+
+\subsubsection*{Tổng kết phương pháp}
+
+MPP và MPRS là hai phương pháp có mối quan hệ bổ trợ. MPP khai thác trực tiếp nhiều đường dịch trung gian để tạo ra những bản dịch tham chiếu có chất lượng cao, trong khi MPRS học cách tái tạo lợi ích của các bản dịch này thông qua điều hướng biểu diễn nội tại.
+
+Sự khác biệt giữa hai phương pháp được thể hiện trong Bảng~\ref{tab:mpp-mprs-comparison}.
+
+\begin{table}[ht]
+	\centering
+	\caption{So sánh hai phương pháp MPP và MPRS.}
+	\label{tab:mpp-mprs-comparison}
+	\begin{tabular}{|p{3.2cm}|p{5.1cm}|p{5.1cm}|}
+		\hline
+		\textbf{Tiêu chí} &
+		\textbf{MPP} &
+		\textbf{MPRS} \\
+		\hline
+		Cách tiếp cận &
+		Prompting sử dụng nhiều ngôn ngữ trung gian &
+		Điều hướng activation trong không gian biểu diễn \\
+		\hline
+		Huấn luyện bổ sung &
+		Không yêu cầu &
+		Huấn luyện các mạng MLP điều hướng \\
+		\hline
+		Thông tin sử dụng khi suy luận &
+		Câu nguồn và các bản dịch pivot được lựa chọn &
+		Câu nguồn và activation đã được điều hướng \\
+		\hline
+		Bản dịch trung gian khi suy luận &
+		Có &
+		Không \\
+		\hline
+		Thành phần được điều chỉnh &
+		Nội dung prompt và thông tin tham chiếu &
+		Activation của các thành phần quan trọng \\
+		\hline
+		Mục tiêu &
+		Cải thiện chất lượng dịch bằng thông tin đa pivot &
+		Tái tạo lợi ích của MPP với chi phí suy luận thấp hơn \\
+		\hline
+	\end{tabular}
+\end{table}
+
+Tóm lại, MPP cung cấp cơ chế khai thác thông tin đa pivot thông qua prompt, còn MPRS chuyển hóa những tín hiệu hữu ích này thành các phép biến đổi biểu diễn có thể áp dụng trực tiếp trong quá trình sinh. Sự kết hợp hai phương pháp tạo thành hướng tiếp cận nhằm cải thiện chất lượng dịch máy đa ngôn ngữ, đồng thời giảm sự phụ thuộc vào các bước sinh bản dịch trung gian khi triển khai suy luận.

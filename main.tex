@@ -1,0 +1,199 @@
+
+\documentclass[12pt,a4paper]{article}
+
+% ==========================================
+% 1. PAGE LAYOUT
+% ==========================================
+\usepackage[
+a4paper,
+left=3cm,
+right=2cm,
+top=2cm,
+bottom=2cm
+]{geometry}
+
+% ==========================================
+% 2. VIETNAMESE SUPPORT
+% ==========================================
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\usepackage[vietnamese]{babel}
+
+% ==========================================
+% 3. NORMAL FONT SIZE: 13PT
+% ==========================================
+\usepackage{fontsize}
+\changefontsize{13pt}
+
+\usepackage{indentfirst}
+\setlength{\parindent}{1cm}
+\setlength{\parskip}{0pt}
+
+% ==========================================
+% 4. SECTION HEADING FORMATTING
+% ==========================================
+\usepackage{titlesec}
+
+% Section: 18pt, Bold + Italic
+\titleformat{\section}
+{\normalfont\fontsize{18pt}{22pt}\selectfont\bfseries\itshape}
+{\thesection}{1em}{}
+
+% Subsection: 16pt, Bold + Italic
+\titleformat{\subsection}
+{\normalfont\fontsize{16pt}{20pt}\selectfont\bfseries\itshape}
+{\thesubsection}{1em}{}
+
+% Subsubsection: 14pt, Bold + Italic
+\titleformat{\subsubsection}
+{\normalfont\fontsize{14pt}{18pt}\selectfont\bfseries\itshape}
+{\thesubsubsection}{1em}{}
+
+% Number headings up to subsubsection
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+% ==========================================
+% 5. NEW PAGE BEFORE EVERY SECTION
+% ==========================================
+\usepackage{etoolbox}
+\pretocmd{\section}{\clearpage}{}{}
+
+\usepackage{setspace}
+\onehalfspacing
+
+% ==========================================
+% 6. OTHER PACKAGES
+% ==========================================
+\usepackage{graphicx}
+
+% Tạm thời vô hiệu hóa toàn bộ ảnh
+% Bỏ dòng dưới đây khi muốn hiển thị hình ảnh
+\RenewDocumentCommand{\includegraphics}{s O{} m}{}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{float}
+
+% ==========================================
+% 7. REFERENCES - AUTHOR YEAR
+% ==========================================
+\usepackage[
+backend=biber,
+style=authoryear,
+sorting=none,
+maxcitenames=2,
+mincitenames=1,
+doi=true,
+url=true,
+eprint=false
+]{biblatex}
+% ==========================================
+% BIBLIOGRAPHY FORMATTING
+% ==========================================
+
+% Không thụt đầu dòng các dòng tiếp theo
+\setlength{\bibhang}{0pt}
+
+% Khoảng cách giữa các tài liệu tham khảo
+\setlength{\bibitemsep}{0.3cm}
+
+% Fix "andothers" -> "et al."
+\DeclareLanguageMapping{vietnamese}{english}
+
+% Sử dụng custom.bib
+\addbibresource{references.bib}
+
+% Dấu phẩy giữa tác giả và năm
+\DeclareDelimFormat{nameyeardelim}{\addcomma\space}
+
+% Dùng \cite thay cho \parencite
+\let\cite\parencite
+
+% ==========================================
+% 8. HYPERLINKS
+% ==========================================
+\usepackage[
+unicode,
+colorlinks=true,
+citecolor=blue,
+linkcolor=black,
+urlcolor=blue
+]{hyperref}
+
+% ==========================================
+% 9. DOCUMENT INFORMATION
+% ==========================================
+\title{Báo cáo đồ án tốt nghiệp}
+\author{Tên sinh viên}
+\date{Tháng 11 năm 2026}
+
+% ==========================================
+% 10. DOCUMENT CONTENT
+% ==========================================
+\begin{document}
+	
+	% ------------------------------------------
+	% TRANG BÌA
+	% ------------------------------------------
+	 %\input{cover.tex}
+	
+	% ------------------------------------------
+	% LỜI CẢM ƠN VÀ NHẬN XÉT
+	% ------------------------------------------
+	\input{chapters/modau.tex}
+	
+	% ------------------------------------------
+	% MỤC LỤC
+	% ------------------------------------------
+	\clearpage
+	\tableofcontents
+	
+	% ------------------------------------------
+	% DANH MỤC TỪ VIẾT TẮT VÀ THUẬT NGỮ
+	% ------------------------------------------
+	\clearpage
+	\input{danh_muc_viet_tat.tex}
+	
+	% ------------------------------------------
+	% DANH MỤC HÌNH ẢNH
+	% ------------------------------------------
+	\clearpage
+	\phantomsection
+	\addcontentsline{toc}{section}{DANH MỤC HÌNH ẢNH}
+	\listoffigures
+	
+	% ------------------------------------------
+	% DANH MỤC BẢNG BIỂU
+	% ------------------------------------------
+	\clearpage
+	\phantomsection
+	\addcontentsline{toc}{section}{DANH MỤC BẢNG BIỂU}
+	\listoftables
+	
+	% ------------------------------------------
+	% NỘI DUNG ĐỒ ÁN
+	% ------------------------------------------
+	\clearpage
+	\input{chapters/chapter1.tex}
+	
+	\input{chapters/chapter2.tex}
+	
+	\input{chapters/chapter3.tex}
+	
+	% Nếu có chương 4 và chương 5 thì bổ sung:
+	% \input{chapters/chapter4.tex}
+	% \input{chapters/chapter5.tex}
+	
+	% ------------------------------------------
+	% TÀI LIỆU THAM KHẢO
+	% ------------------------------------------
+	\clearpage
+	\phantomsection
+	\addcontentsline{toc}{section}{TÀI LIỆU THAM KHẢO}
+	\printbibliography[title={TÀI LIỆU THAM KHẢO}]
+	
+\end{document}

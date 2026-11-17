@@ -1,0 +1,218 @@
+
+\section{CƠ SỞ LÝ THUYẾT VÀ TỔNG QUAN CÁC NGHIÊN CỨU LIÊN QUAN}
+
+\subsection{Cơ sở lý thuyết về mô hình ngôn ngữ lớn}
+
+\subsubsection{Kiến trúc Transformer}
+
+Transformer là kiến trúc mạng nơ-ron được giới thiệu nhằm xử lý dữ liệu tuần tự mà không cần sử dụng các cấu trúc hồi quy như Recurrent Neural Network (RNN) hay Long Short-Term Memory (LSTM). Thay vì xử lý lần lượt từng phần tử trong chuỗi, Transformer sử dụng cơ chế Attention để mô hình hóa mối quan hệ giữa các phần tử đầu vào. Cách tiếp cận này cho phép mô hình xử lý các vị trí trong chuỗi song song trong quá trình huấn luyện, đồng thời nắm bắt được những phụ thuộc ở khoảng cách xa \cite{vaswani2017attention}.
+
+Kiến trúc Transformer nguyên bản bao gồm hai thành phần chính là Encoder và Decoder. Encoder có nhiệm vụ tiếp nhận chuỗi đầu vào và chuyển đổi thành các biểu diễn ngữ cảnh. Decoder sử dụng các biểu diễn này kết hợp với những token đã được sinh trước đó để tạo ra chuỗi đầu ra. Mỗi thành phần được cấu thành từ nhiều lớp xử lý được xếp chồng lên nhau. Trong đó, các lớp Attention và mạng Feed-Forward đóng vai trò quan trọng trong việc trích xuất và biến đổi thông tin.
+
+Trong quá trình xử lý, các token đầu vào trước tiên được ánh xạ thành các vector embedding có kích thước cố định. Do cơ chế Attention không tự biểu diễn thứ tự xuất hiện của các token, Transformer bổ sung thông tin vị trí (Positional Encoding) vào các vector embedding. Nhờ đó, mô hình có thể phân biệt các token có cùng nội dung nhưng xuất hiện ở những vị trí khác nhau trong chuỗi \cite{vaswani2017attention}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/transformer_architecture.png}
+    \caption{Kiến trúc Transformer tổng quát.}
+    \label{fig:transformer}
+\end{figure}
+
+Trong các mô hình ngôn ngữ lớn hiện đại, kiến trúc Transformer thường được điều chỉnh theo những cấu hình khác nhau. Một trong những cấu hình phổ biến là Decoder-only Transformer, trong đó mô hình chỉ sử dụng các khối Decoder với cơ chế Attention có mặt nạ nhân quả (Causal Attention). Cấu hình này cho phép mô hình dự đoán token tiếp theo dựa trên các token đã xuất hiện trước đó, phù hợp với nhiệm vụ sinh văn bản tự hồi quy.
+
+Các mô hình ngôn ngữ lớn như GPT và nhiều mô hình có khả năng làm theo chỉ dẫn hiện nay sử dụng cách tiếp cận sinh tự hồi quy dựa trên Transformer. Thay vì trực tiếp ánh xạ một chuỗi đầu vào sang một chuỗi đầu ra cố định, mô hình học phân phối xác suất trên các chuỗi token và lần lượt sinh từng token trong quá trình suy luận \cite{brown2020language,radford2019language}.
+
+Đối với bài toán dịch máy, kiến trúc Transformer cung cấp khả năng mô hình hóa quan hệ ngữ nghĩa giữa các thành phần trong câu nguồn, đồng thời hỗ trợ sinh chuỗi token tương ứng trong ngôn ngữ đích. Khi được mở rộng bằng dữ liệu huấn luyện đa ngôn ngữ, một mô hình có thể học cách xử lý nhiều ngôn ngữ trong cùng một không gian tham số. Tuy nhiên, khả năng dịch giữa các cặp ngôn ngữ không nhất thiết đồng đều, đặc biệt đối với những hướng dịch không có tiếng Anh ở phía nguồn hoặc phía đích \cite{zhu-etal-2024-multilingual}.
+
+\subsubsection{Cơ chế Self-Attention và mạng Feed-Forward}
+
+Self-Attention là cơ chế cốt lõi của Transformer, cho phép mỗi token trong chuỗi xác định mức độ liên quan với những token còn lại. Thông qua cơ chế này, biểu diễn của một token không chỉ phụ thuộc vào bản thân token đó mà còn được cập nhật dựa trên thông tin từ các vị trí khác trong chuỗi.
+
+Với ma trận biểu diễn đầu vào $X$, Transformer thực hiện các phép biến đổi tuyến tính để tạo ra ba ma trận Query, Key và Value:
+
+\begin{equation}
+    Q = XW_Q,\qquad
+    K = XW_K,\qquad
+    V = XW_V,
+\end{equation}
+
+trong đó $W_Q$, $W_K$ và $W_V$ là các ma trận tham số có thể học được. Query biểu diễn thông tin mà một vị trí đang tìm kiếm, Key biểu diễn đặc trưng được sử dụng để xác định mức độ phù hợp, còn Value chứa thông tin được tổng hợp từ các vị trí khác.
+
+Mức độ tương đồng giữa Query và Key được tính bằng tích vô hướng, sau đó được chuẩn hóa bằng hàm Softmax. Kết quả được sử dụng làm trọng số để tổng hợp các vector Value:
+
+\begin{equation}
+    \mathrm{Attention}(Q,K,V)
+    =
+    \mathrm{softmax}
+    \left(
+    \frac{QK^\top}{\sqrt{d_k}}
+    \right)V,
+\end{equation}
+
+trong đó $d_k$ là số chiều của vector Key. Phép chia cho $\sqrt{d_k}$ giúp ổn định giá trị đầu vào của hàm Softmax, hạn chế hiện tượng các giá trị quá lớn khiến phân phối xác suất trở nên quá tập trung \cite{vaswani2017attention}.
+
+Transformer còn sử dụng cơ chế Multi-Head Attention. Thay vì chỉ tính toán một phép Attention duy nhất, mô hình thực hiện nhiều phép Attention song song trên các không gian biểu diễn khác nhau. Các kết quả sau đó được nối lại và chiếu tuyến tính để tạo thành biểu diễn đầu ra:
+
+\begin{equation}
+\begin{aligned}
+    \mathrm{head}_i
+    &= \mathrm{Attention}
+    (QW_i^Q,KW_i^K,VW_i^V),\\
+    \mathrm{MultiHead}(Q,K,V)
+    &= \mathrm{Concat}
+    (\mathrm{head}_1,\ldots,\mathrm{head}_h)W^O,
+\end{aligned}
+\end{equation}
+
+trong đó $h$ là số lượng Attention Head. Việc sử dụng nhiều Head cho phép mô hình đồng thời khai thác các dạng quan hệ khác nhau giữa các token.
+
+Đối với các mô hình Decoder-only, cơ chế Self-Attention thường được kết hợp với mặt nạ nhân quả. Mặt nạ này ngăn vị trí hiện tại truy cập thông tin từ các token ở phía sau, bảo đảm rằng quá trình dự đoán chỉ dựa trên ngữ cảnh đã có. Cụ thể, các vị trí tương lai được gán giá trị âm rất lớn trước khi áp dụng Softmax, khiến trọng số Attention tương ứng tiến về không.
+
+Bên cạnh Attention, mỗi khối Transformer còn chứa một mạng Feed-Forward Network (FFN). Mạng này thực hiện biến đổi phi tuyến độc lập trên biểu diễn của từng vị trí trong chuỗi. Dạng FFN cơ bản được biểu diễn như sau:
+
+\begin{equation}
+    \mathrm{FFN}(x)
+    =
+    \sigma(xW_1+b_1)W_2+b_2,
+\end{equation}
+
+trong đó $W_1$, $W_2$ là các ma trận trọng số; $b_1$, $b_2$ là các vector độ lệch; và $\sigma$ là hàm kích hoạt phi tuyến. Trong các mô hình hiện đại, FFN có thể sử dụng những biến thể như GELU hoặc SwiGLU.
+
+Có thể xem Attention và FFN là hai thành phần thực hiện những chức năng bổ trợ nhau. Attention tổng hợp thông tin giữa các vị trí trong chuỗi, trong khi FFN biến đổi thông tin đã được tổng hợp thành những biểu diễn có tính phi tuyến. Sự kết hợp này giúp Transformer vừa khai thác quan hệ ngữ cảnh, vừa học được những phép biến đổi phức tạp trong không gian biểu diễn.
+
+Đối với nghiên cứu về cơ chế xử lý đa ngôn ngữ, cả Attention Head và các lớp Feed-Forward đều là những thành phần đáng quan tâm. Một số nghiên cứu đã chỉ ra rằng các thành phần bên trong LLM có thể tham gia vào những chức năng khác nhau liên quan đến xử lý ngôn ngữ, biểu diễn thông tin và dịch máy \cite{tang-etal-2024-language,zhang2026exploring}. Đây cũng là cơ sở để xem xét khả năng tác động trực tiếp lên biểu diễn nội tại của mô hình thay vì chỉ điều chỉnh nội dung đầu vào.
+
+\subsubsection{Quá trình sinh văn bản tự hồi quy}
+
+Các mô hình ngôn ngữ lớn sử dụng kiến trúc Decoder-only thường sinh văn bản theo cơ chế tự hồi quy (Autoregressive Generation). Theo cơ chế này, mô hình dự đoán token tiếp theo dựa trên chuỗi token đã được cung cấp hoặc sinh ra trước đó.
+
+Cho chuỗi token đầu vào $x=(x_1,x_2,\ldots,x_n)$, xác suất của một chuỗi đầu ra $y=(y_1,y_2,\ldots,y_m)$ được phân rã theo quy tắc xác suất có điều kiện:
+
+\begin{equation}
+    P(y\mid x)
+    =
+    \prod_{t=1}^{m}
+    P(y_t\mid x,y_1,\ldots,y_{t-1}).
+\end{equation}
+
+Tại mỗi bước sinh, mô hình nhận ngữ cảnh hiện tại và dự đoán phân phối xác suất trên toàn bộ từ vựng. Token tiếp theo được lựa chọn từ phân phối này theo một chiến lược giải mã cụ thể. Token vừa được sinh sẽ được nối vào ngữ cảnh để tiếp tục dự đoán token ở bước kế tiếp.
+
+Quá trình này có thể được mô tả qua các bước:
+
+\begin{enumerate}
+    \item Tiếp nhận chuỗi đầu vào và chuyển đổi thành các token.
+    \item Xử lý chuỗi token thông qua các lớp Transformer để tạo biểu diễn ngữ cảnh.
+    \item Tính toán phân phối xác suất của token tiếp theo.
+    \item Lựa chọn token theo chiến lược giải mã.
+    \item Bổ sung token vừa sinh vào chuỗi hiện tại và lặp lại quá trình cho đến khi gặp token kết thúc hoặc đạt giới hạn độ dài.
+\end{enumerate}
+
+Một số chiến lược giải mã thường được sử dụng bao gồm Greedy Decoding, Beam Search, Top-$k$ Sampling và Top-$p$ Sampling. Greedy Decoding lựa chọn token có xác suất cao nhất tại mỗi bước. Beam Search duy trì nhiều chuỗi ứng viên nhằm tìm kiếm chuỗi có xác suất tổng thể cao. Trong khi đó, Top-$k$ và Top-$p$ Sampling lựa chọn token từ một tập con của phân phối xác suất, qua đó tạo ra sự đa dạng trong kết quả sinh.
+
+Trong bài toán dịch máy, quá trình sinh tự hồi quy cho phép LLM tạo bản dịch từng token dựa trên câu nguồn và phần bản dịch đã được sinh trước đó. Tuy nhiên, sai sót ở một bước có thể ảnh hưởng đến các bước tiếp theo vì token được sinh ra sẽ trở thành một phần của ngữ cảnh. Do đó, chất lượng bản dịch không chỉ phụ thuộc vào khả năng hiểu câu nguồn mà còn chịu ảnh hưởng bởi quá trình tích lũy thông tin trong quá trình giải mã.
+
+Cơ chế tự hồi quy cũng có ý nghĩa đối với các phương pháp can thiệp biểu diễn. Do mô hình thực hiện dự đoán lặp lại tại từng bước sinh, những thay đổi trên biểu diễn nội tại có thể tác động đến phân phối xác suất của token tiếp theo. Đây là cơ sở để nghiên cứu các phương pháp điều hướng hoạt động của LLM trong quá trình suy luận mà không nhất thiết phải thay đổi toàn bộ tham số của mô hình.
+
+\subsubsection{Prompting và In-Context Learning}
+
+Prompting là phương pháp cung cấp chỉ dẫn hoặc thông tin bổ sung cho mô hình thông qua chuỗi đầu vào nhằm định hướng hành vi và kết quả sinh. Đối với LLM, prompt có thể bao gồm chỉ dẫn về nhiệm vụ, dữ liệu đầu vào, ví dụ minh họa và những ràng buộc đối với định dạng đầu ra.
+
+Trong bài toán dịch máy, một prompt cơ bản thường bao gồm yêu cầu dịch, ngôn ngữ nguồn, ngôn ngữ đích và câu cần dịch. Chẳng hạn, mô hình có thể nhận được chỉ dẫn yêu cầu chuyển một câu từ tiếng Pháp sang tiếng Đức. Mô hình dựa trên nội dung prompt để xác định nhiệm vụ và sinh ra bản dịch tương ứng.
+
+Một ưu điểm quan trọng của LLM là khả năng thực hiện nhiệm vụ thông qua In-Context Learning (ICL). Thay vì cập nhật tham số mô hình bằng một quá trình huấn luyện bổ sung, ICL cung cấp một hoặc nhiều ví dụ trực tiếp trong ngữ cảnh đầu vào. Mô hình sử dụng những ví dụ này để suy luận về cấu trúc nhiệm vụ và tạo ra kết quả phù hợp \cite{brown2020language}.
+
+Dựa trên số lượng ví dụ được cung cấp, prompting thường được chia thành ba hình thức chính:
+
+\begin{itemize}
+    \item \textbf{Zero-shot prompting:} Chỉ cung cấp hướng dẫn về nhiệm vụ mà không đưa ra ví dụ minh họa.
+    \item \textbf{One-shot prompting:} Cung cấp một ví dụ mẫu để mô hình tham khảo trước khi thực hiện nhiệm vụ.
+    \item \textbf{Few-shot prompting:} Cung cấp một số ví dụ trong ngữ cảnh nhằm giúp mô hình nhận biết quy luật và cách thức thực hiện nhiệm vụ.
+\end{itemize}
+
+Đối với dịch máy, các ví dụ trong prompt thường bao gồm câu nguồn và bản dịch tương ứng. Việc bổ sung ví dụ có thể cung cấp thông tin về cách diễn đạt, thuật ngữ và cấu trúc ngôn ngữ đích. Tuy nhiên, hiệu quả của ICL còn phụ thuộc vào chất lượng, số lượng và mức độ liên quan của các ví dụ được đưa vào ngữ cảnh.
+
+Ngoài việc cung cấp ví dụ song ngữ, prompt còn có thể được mở rộng bằng các thông tin trung gian nhằm hỗ trợ quá trình dịch. Chẳng hạn, Chain-of-Dictionary Prompting bổ sung thông tin từ các từ điển đa ngôn ngữ để hỗ trợ mô hình xử lý những từ hoặc cụm từ khó dịch \cite{lu-etal-2024-chain}. Các phương pháp prompting khác cũng khai thác thông tin bổ sung và cơ chế tự đánh giá nhằm cải thiện chất lượng bản dịch \cite{feng-etal-2025-tear,he-etal-2024-exploring}.
+
+Mặc dù prompting có ưu điểm là không yêu cầu cập nhật tham số mô hình, việc bổ sung quá nhiều thông tin vào ngữ cảnh có thể làm tăng chi phí suy luận và độ trễ. Ngoài ra, thông tin bổ sung không phải lúc nào cũng hữu ích và có thể làm mô hình bị ảnh hưởng bởi những ví dụ hoặc bản dịch có chất lượng thấp. Những hạn chế này đặt ra yêu cầu nghiên cứu các phương pháp khai thác thông tin trung gian hiệu quả hơn, đồng thời giảm chi phí phát sinh trong quá trình sinh.
+
+\subsection{Các phương pháp dịch máy sử dụng mô hình ngôn ngữ lớn}
+
+Sự phát triển của LLM đã mở rộng cách tiếp cận đối với bài toán dịch máy. Khác với các hệ thống dịch máy nơ-ron truyền thống thường được huấn luyện chuyên biệt trên dữ liệu song ngữ, LLM có thể thực hiện dịch máy thông qua các chỉ dẫn bằng ngôn ngữ tự nhiên. Khả năng này xuất phát từ việc mô hình được huấn luyện trên lượng lớn dữ liệu văn bản đa dạng và có thể thực hiện nhiều nhiệm vụ thông qua prompt \cite{info16090723}.
+
+Các phương pháp dịch máy sử dụng LLM có thể được phân thành hai nhóm lớn: phương pháp dựa trên prompting và phương pháp dựa trên huấn luyện hoặc tinh chỉnh mô hình.
+
+\textbf{Nhóm phương pháp dựa trên prompting.}
+
+Đây là hướng tiếp cận sử dụng prompt để khai thác năng lực dịch đã có của LLM mà không cần cập nhật tham số mô hình. Phương pháp cơ bản nhất là Direct Prompting, trong đó mô hình nhận trực tiếp câu nguồn cùng chỉ dẫn về ngôn ngữ đích và sinh ra bản dịch. Cách tiếp cận này có ưu điểm đơn giản, dễ triển khai và không yêu cầu dữ liệu huấn luyện bổ sung.
+
+Tuy nhiên, hiệu năng dịch trực tiếp của LLM có thể không đồng đều giữa các cặp ngôn ngữ. Những hướng dịch có ít dữ liệu huấn luyện hoặc không được hỗ trợ tốt trong quá trình tiền huấn luyện thường gặp nhiều khó khăn hơn \cite{zhu-etal-2024-multilingual}. Đặc biệt, khả năng dịch giữa hai ngôn ngữ không phải tiếng Anh vẫn là một thách thức đáng kể đối với các mô hình có thiên hướng xử lý ngôn ngữ lấy tiếng Anh làm trung tâm.
+
+Một hướng cải thiện prompting là cung cấp thêm thông tin liên quan đến quá trình dịch. Chain-of-Dictionary Prompting sử dụng các chuỗi từ điển đa ngôn ngữ để bổ sung thông tin từ vựng, qua đó hỗ trợ mô hình xử lý các cặp ngôn ngữ có mức độ tài nguyên thấp \cite{lu-etal-2024-chain}. Phương pháp TEaR khai thác cơ chế Translate, Estimate, and Refine, trong đó mô hình tạo bản dịch ban đầu, ước lượng chất lượng và sử dụng thông tin phản hồi để tinh chỉnh kết quả \cite{feng-etal-2025-tear}. MAPS cũng khai thác nhiều khía cạnh thông tin liên quan đến câu nguồn như từ khóa, chủ đề và ví dụ minh họa nhằm hỗ trợ quá trình sinh bản dịch \cite{he-etal-2024-exploring}.
+
+Một hướng tiếp cận khác là dịch thông qua ngôn ngữ trung gian (Pivot-based Translation). Thay vì dịch trực tiếp từ ngôn ngữ nguồn sang ngôn ngữ đích, mô hình thực hiện quá trình dịch qua một ngôn ngữ trung gian. Ví dụ, với hướng dịch từ tiếng Pháp sang tiếng Đức, hệ thống có thể thực hiện hai bước: tiếng Pháp sang tiếng Anh, sau đó tiếng Anh sang tiếng Đức. Cách tiếp cận này có thể tận dụng năng lực dịch tốt hơn của mô hình đối với những cặp ngôn ngữ có mức độ hỗ trợ cao.
+
+Các nghiên cứu về dịch máy sử dụng nhiều ngôn ngữ trung gian đã khảo sát những chiến lược kết hợp các đường dịch khác nhau. Tuy nhiên, việc kết hợp nhiều bản dịch trung gian không phải lúc nào cũng cải thiện chất lượng, bởi sai sót hoặc hiện tượng sinh thông tin không có trong câu nguồn có thể được truyền qua các bước dịch \cite{mohammadshahi-etal-2024-investigating}. PIVOTE cũng khai thác bản dịch qua ngôn ngữ trung gian như một tín hiệu bổ sung cho quá trình dịch \cite{oh2025single}.
+
+\textbf{Nhóm phương pháp dựa trên huấn luyện và tinh chỉnh mô hình.}
+
+Khác với prompting, nhóm phương pháp này trực tiếp cập nhật tham số mô hình thông qua dữ liệu huấn luyện bổ sung. Mục tiêu là giúp LLM cải thiện năng lực dịch, đặc biệt đối với những ngôn ngữ hoặc hướng dịch chưa được hỗ trợ tốt.
+
+Một hướng tiếp cận là tinh chỉnh đa ngôn ngữ bằng các chỉ dẫn dịch máy. Phương pháp này sử dụng dữ liệu song ngữ kết hợp với chỉ dẫn nhiệm vụ để giúp mô hình học cách thực hiện dịch máy trên nhiều cặp ngôn ngữ. Nghiên cứu về multilingual fine-tuning cho thấy việc huấn luyện với các chỉ dẫn dịch có thể cải thiện khả năng thực hiện nhiệm vụ dịch máy và hỗ trợ khái quát hóa sang những cặp ngôn ngữ chưa xuất hiện trong giai đoạn tinh chỉnh \cite{li-etal-2024-eliciting}.
+
+Bên cạnh đó, EnAnchored-X2X khai thác năng lực dịch liên quan đến tiếng Anh để cải thiện dịch máy nhiều-ngôn-ngữ sang nhiều-ngôn-ngữ. Phương pháp này xây dựng dữ liệu tổng hợp dựa trên các cặp dịch có liên quan đến tiếng Anh, sau đó sử dụng các chiến lược tối ưu hóa nhằm cải thiện khả năng dịch giữa những ngôn ngữ không phải tiếng Anh \cite{yang-etal-2025-enanchored}.
+
+Nhìn chung, các phương pháp tinh chỉnh có khả năng cải thiện trực tiếp năng lực của mô hình nhưng thường yêu cầu dữ liệu huấn luyện và tài nguyên tính toán đáng kể. Trong khi đó, prompting có ưu điểm không cần cập nhật tham số nhưng có thể phát sinh chi phí suy luận khi sử dụng nhiều bước tạo nội dung trung gian. Sự khác biệt này tạo động lực cho các phương pháp vừa khai thác được thông tin bổ sung, vừa hạn chế chi phí phát sinh trong quá trình suy luận.
+
+\subsection{Các nghiên cứu về cơ chế xử lý đa ngôn ngữ trong LLM}
+
+Khả năng xử lý đa ngôn ngữ của LLM không chỉ phụ thuộc vào dữ liệu huấn luyện mà còn liên quan đến cách thông tin ngôn ngữ được biểu diễn và xử lý bên trong mạng nơ-ron. Mặc dù một mô hình có thể tiếp nhận nhiều ngôn ngữ trong cùng một kiến trúc, điều này không đồng nghĩa với việc mô hình xử lý tất cả các ngôn ngữ theo cùng một cơ chế hoặc đạt hiệu năng tương đương trên mọi cặp ngôn ngữ.
+
+Một hướng nghiên cứu quan trọng tập trung vào việc phân tích các neuron có vai trò trong xử lý đa ngôn ngữ. Các nghiên cứu đã chỉ ra sự tồn tại của những neuron có mức độ chuyên biệt đối với một ngôn ngữ nhất định, bên cạnh những neuron có liên quan đến nhiều ngôn ngữ khác nhau \cite{tang-etal-2024-language}. Những phát hiện này cho thấy biểu diễn đa ngôn ngữ trong LLM có thể bao gồm cả các thành phần chuyên biệt và các thành phần được chia sẻ giữa nhiều ngôn ngữ.
+
+Mở rộng hướng nghiên cứu trên, một số công trình phân loại neuron thành các nhóm có chức năng khác nhau, bao gồm neuron đặc thù ngôn ngữ, neuron liên quan đến nhiều ngôn ngữ và neuron dùng chung. Cách phân loại này cung cấp thêm góc nhìn về quá trình xử lý đa ngôn ngữ, từ việc hiểu đầu vào, hình thành biểu diễn ngữ nghĩa đến chuyển đổi sang không gian đầu ra của ngôn ngữ đích \cite{Zhang_Lai_Liu_She_Liu_Gong_Huang_Chen_2026}.
+
+Bên cạnh phân tích ở cấp độ neuron, một số nghiên cứu tập trung vào vai trò của Attention Head và các lớp MLP trong quá trình dịch máy. Các thành phần này có thể tham gia vào việc xử lý tín hiệu liên quan đến dịch thuật và chuyển đổi thông tin giữa các ngôn ngữ. Những phân tích cơ chế cho thấy một số thành phần bên trong mô hình có mức độ ảnh hưởng đáng kể đến quá trình tạo bản dịch \cite{binbinliu2026token,zhang2026exploring}.
+
+Một khía cạnh khác là vai trò của tiếng Anh trong không gian biểu diễn đa ngôn ngữ. Do dữ liệu huấn luyện của nhiều LLM có sự mất cân bằng giữa các ngôn ngữ, tiếng Anh có thể đóng vai trò như một không gian trung gian trong quá trình xử lý thông tin. Nghiên cứu về không gian biểu diễn tiềm ẩn của các mô hình Transformer đa ngôn ngữ cho thấy biểu diễn qua các lớp có thể trải qua những giai đoạn khác nhau, trong đó không gian khái niệm có xu hướng gần với tiếng Anh hơn so với một số ngôn ngữ đầu vào khác \cite{wendler-etal-2024-llamas}.
+
+Những kết quả này gợi ý rằng khả năng dịch giữa hai ngôn ngữ không phải tiếng Anh có thể chịu ảnh hưởng bởi cách mô hình tổ chức thông tin đa ngôn ngữ bên trong. Thay vì xem quá trình dịch chỉ là phép ánh xạ trực tiếp giữa hai không gian ngôn ngữ, cần xem xét cả những biểu diễn trung gian và các thành phần tham gia vào quá trình biến đổi thông tin.
+
+Đối với bài toán dịch máy nhiều-ngôn-ngữ sang nhiều-ngôn-ngữ, việc hiểu cơ chế xử lý đa ngôn ngữ có ý nghĩa quan trọng. Nếu xác định được những thành phần có vai trò trong việc tiếp nhận, kết hợp và chuyển đổi thông tin giữa các ngôn ngữ, có thể khai thác chúng để cải thiện chất lượng dịch mà không nhất thiết phải huấn luyện lại toàn bộ mô hình.
+
+\subsection{Các phương pháp điều hướng biểu diễn của LLM}
+
+Các phương pháp điều hướng biểu diễn (Representation Steering hoặc Activation Steering) hướng đến việc thay đổi hành vi của LLM bằng cách can thiệp vào các biểu diễn nội tại trong quá trình suy luận. Thay vì cập nhật toàn bộ tham số mô hình như trong quá trình fine-tuning, các phương pháp này tác động trực tiếp lên activation tại một hoặc nhiều vị trí trong mạng nơ-ron.
+
+Ý tưởng cơ bản của activation steering là xác định những hướng hoặc thành phần biểu diễn có liên quan đến một hành vi mong muốn, sau đó điều chỉnh activation để làm tăng hoặc giảm mức độ biểu hiện của hành vi đó. Cách tiếp cận này cho phép điều khiển đầu ra của mô hình thông qua các phép biến đổi trên không gian biểu diễn.
+
+Một phương pháp tiêu biểu là Activation Addition, trong đó một vector điều hướng được cộng trực tiếp vào activation của mô hình. Vector này thường được xây dựng từ sự khác biệt giữa các biểu diễn tương ứng với hai trạng thái hoặc hành vi đối lập. Khi được áp dụng trong quá trình suy luận, phép cộng activation có thể làm thay đổi xu hướng sinh văn bản của mô hình \cite{rimsky-etal-2024-steering}.
+
+Inference-Time Intervention cũng khai thác sự khác biệt giữa các biểu diễn để can thiệp vào hoạt động của mô hình tại thời điểm suy luận. Phương pháp này cho thấy có thể cải thiện một số đặc tính đầu ra bằng cách tác động lên biểu diễn nội tại mà không cần thực hiện quá trình tinh chỉnh tham số đầy đủ \cite{li2023inference}. Tương tự, Representation Engineering đề xuất cách tiếp cận từ trên xuống nhằm xác định và điều khiển các biểu diễn liên quan đến những khái niệm hoặc thuộc tính mong muốn \cite{zou2023representation}.
+
+Ngoài các phương pháp điều hướng bằng vector, những nghiên cứu gần đây còn khảo sát các cơ chế can thiệp linh hoạt hơn. Chẳng hạn, các phương pháp điều hướng đa thuộc tính xem xét khả năng điều chỉnh nhiều đặc tính của đầu ra, trong khi những phương pháp dựa trên nhiều không gian con hướng đến việc kiểm soát các nhóm biểu diễn khác nhau \cite{nguyen2025multi,jiang2026msrs,Wang_2025}.
+
+Trong lĩnh vực dịch máy, điều hướng biểu diễn cũng đã được nghiên cứu nhằm kiểm soát phong cách dịch. SAE Steering sử dụng các đặc trưng được trích xuất từ Sparse Autoencoder để điều chỉnh phong cách bản dịch theo đặc điểm của người dịch \cite{scalena2026steering}. Hướng tiếp cận này cho thấy activation steering có thể được áp dụng cho các thuộc tính cụ thể của đầu ra dịch máy.
+
+Tuy nhiên, điều hướng phong cách dịch và cải thiện trực tiếp chất lượng dịch là hai mục tiêu khác nhau. Một bản dịch có thể tuân theo phong cách mong muốn nhưng vẫn chứa lỗi về ngữ nghĩa hoặc thiếu thông tin. Vì vậy, việc sử dụng activation steering để cải thiện độ chính xác và chất lượng dịch cần xác định được những thành phần biểu diễn có liên quan trực tiếp đến quá trình xử lý thông tin dịch thuật.
+
+Trong bối cảnh đó, việc kết hợp phân tích cơ chế với điều hướng biểu diễn là một hướng tiếp cận đáng quan tâm. Trước tiên, cần xác định những Attention Head hoặc lớp MLP có ảnh hưởng đến quá trình dịch. Sau đó, có thể xây dựng các phép biến đổi biểu diễn nhằm hướng hoạt động của những thành phần này đến trạng thái có lợi cho chất lượng bản dịch. Cách tiếp cận này tạo cơ sở lý thuyết cho việc nghiên cứu các phương pháp điều hướng biểu diễn chuyên biệt cho dịch máy.
+
+\subsection{Phân tích hạn chế của các nghiên cứu hiện tại}
+
+Từ những nghiên cứu đã trình bày, có thể nhận thấy các phương pháp sử dụng LLM cho dịch máy đã đạt được nhiều tiến bộ. Tuy nhiên, vẫn còn một số hạn chế đáng chú ý, đặc biệt trong bối cảnh dịch máy nhiều-ngôn-ngữ sang nhiều-ngôn-ngữ.
+
+Thứ nhất, hiệu năng dịch máy của LLM chưa đồng đều giữa các cặp ngôn ngữ. Nhiều mô hình thể hiện năng lực tốt hơn trên những hướng dịch có liên quan đến tiếng Anh, trong khi các hướng dịch không sử dụng tiếng Anh ở cả hai phía vẫn gặp nhiều khó khăn \cite{zhu-etal-2024-multilingual,yang-etal-2025-enanchored}. Điều này cho thấy việc mở rộng số lượng ngôn ngữ được hỗ trợ không đồng nghĩa với việc mô hình có khả năng dịch tốt trên tất cả các hướng dịch.
+
+Thứ hai, các phương pháp prompting có thể cần bổ sung nhiều thông tin trung gian để cải thiện chất lượng bản dịch. Những thông tin này có thể bao gồm ví dụ song ngữ, từ điển đa ngôn ngữ hoặc các bản dịch được tạo qua ngôn ngữ trung gian \cite{lu-etal-2024-chain,oh2025single}. Tuy nhiên, việc tạo và đưa các thông tin bổ sung vào prompt có thể làm tăng độ dài ngữ cảnh, số lần gọi mô hình và chi phí suy luận. Bên cạnh đó, nếu thông tin trung gian có chất lượng thấp, nó có thể gây nhiễu cho quá trình sinh bản dịch cuối cùng.
+
+Thứ ba, các phương pháp dịch qua ngôn ngữ trung gian vẫn đối mặt với vấn đề lựa chọn pivot và lan truyền lỗi. Một ngôn ngữ trung gian có thể phù hợp với một hướng dịch nhưng không nhất thiết phù hợp với những hướng dịch khác. Việc sử dụng một pivot cố định có thể không khai thác được đầy đủ năng lực đa ngôn ngữ của mô hình. Ngược lại, việc kết hợp nhiều pivot thiếu cơ chế đánh giá phù hợp có thể làm tăng ảnh hưởng của các bản dịch sai \cite{mohammadshahi-etal-2024-investigating}.
+
+Thứ tư, các phương pháp fine-tuning có thể cải thiện năng lực dịch thông qua việc cập nhật tham số mô hình, nhưng thường yêu cầu dữ liệu huấn luyện và tài nguyên tính toán đáng kể. Đối với những mô hình lớn, việc chuẩn bị dữ liệu đa ngôn ngữ và thực hiện tối ưu hóa trên nhiều hướng dịch có thể làm tăng đáng kể chi phí triển khai \cite{li-etal-2024-eliciting,yang-etal-2025-enanchored}.
+
+Thứ năm, mặc dù các nghiên cứu về cơ chế đa ngôn ngữ đã xác định được một số neuron, Attention Head và lớp MLP có vai trò trong quá trình xử lý ngôn ngữ, việc chuyển những hiểu biết này thành các phương pháp cải thiện chất lượng dịch vẫn là một vấn đề cần tiếp tục nghiên cứu \cite{tang-etal-2024-language,zhang2026exploring,binbinliu2026token}. Phân tích cơ chế có thể giúp xác định những thành phần quan trọng, nhưng bản thân việc xác định các thành phần này chưa trực tiếp bảo đảm rằng chất lượng bản dịch sẽ được cải thiện khi can thiệp vào chúng.
+
+Cuối cùng, các phương pháp activation steering hiện nay chủ yếu được khảo sát trong những nhiệm vụ điều khiển hành vi, thuộc tính hoặc phong cách đầu ra. Việc áp dụng chúng để cải thiện trực tiếp chất lượng dịch máy, đặc biệt trên nhiều hướng dịch không có tiếng Anh, vẫn cần được nghiên cứu sâu hơn \cite{rimsky-etal-2024-steering,li2023inference,scalena2026steering}.
+
+Từ những hạn chế trên, có thể xác định nhu cầu về một phương pháp vừa khai thác được thông tin bổ trợ từ nhiều ngôn ngữ trung gian, vừa hạn chế chi phí suy luận phát sinh khi tạo các bản dịch trung gian. Đồng thời, phương pháp cần tận dụng hiểu biết về các thành phần xử lý bên trong LLM để cải thiện chất lượng dịch trực tiếp.
+
+Đây là cơ sở cho hướng tiếp cận được nghiên cứu trong đồ án. Cụ thể, Multi-Pivot Prompting khai thác nhiều ngôn ngữ trung gian để tạo ra các bản dịch tham chiếu bổ trợ cho quá trình sinh bản dịch cuối cùng. Trên cơ sở đó, Multi-Pivot Representation Steering hướng đến việc chuyển hóa lợi ích từ các bản dịch đa pivot vào không gian biểu diễn nội tại của mô hình, qua đó giảm sự phụ thuộc vào việc tạo các bản dịch trung gian trong quá trình suy luận.

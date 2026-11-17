@@ -1,0 +1,273 @@
+
+\section{GIỚI THIỆU BÀI TOÁN}
+\label{chap:introduction}
+
+\subsection{TỔNG QUAN VỀ BÀI TOÁN DỊCH MÁY}
+\label{sec:machine_translation_overview}
+
+Dịch máy (Machine Translation -- MT) là một trong những bài toán quan trọng của lĩnh vực xử lý ngôn ngữ tự nhiên (Natural Language Processing -- NLP), với mục tiêu tự động chuyển đổi một văn bản từ ngôn ngữ nguồn sang một ngôn ngữ đích, đồng thời bảo toàn nội dung ngữ nghĩa, thông tin ngữ cảnh và các đặc trưng ngôn ngữ cần thiết. Đây là một bài toán có tính ứng dụng cao, đóng vai trò quan trọng trong việc phá vỡ rào cản ngôn ngữ, hỗ trợ giao tiếp xuyên quốc gia, phổ biến tri thức và thúc đẩy khả năng tiếp cận thông tin đa ngôn ngữ.
+
+Về bản chất, dịch máy không đơn thuần là quá trình thay thế các từ trong ngôn ngữ nguồn bằng những từ tương ứng trong ngôn ngữ đích. Một hệ thống dịch máy hiệu quả cần có khả năng nhận diện ngữ cảnh, xử lý các cấu trúc cú pháp khác biệt, nắm bắt những sắc thái ngữ nghĩa và lựa chọn cách diễn đạt phù hợp trong ngôn ngữ đích. Đặc biệt, cùng một từ hoặc cụm từ có thể mang nhiều ý nghĩa khác nhau tùy thuộc vào ngữ cảnh xuất hiện. Do đó, việc xây dựng một hệ thống dịch máy có chất lượng cao đòi hỏi khả năng mô hình hóa mối quan hệ giữa các thành phần ngôn ngữ ở nhiều cấp độ, từ từ vựng, cú pháp đến ngữ nghĩa và ngữ dụng.
+
+Trong quá trình phát triển, dịch máy đã trải qua nhiều giai đoạn với các phương pháp tiếp cận khác nhau. Những phương pháp ban đầu chủ yếu dựa trên luật ngôn ngữ và các quy tắc chuyển đổi được thiết kế thủ công. Sau đó, dịch máy thống kê (Statistical Machine Translation -- SMT) được phát triển, sử dụng các mô hình xác suất được học từ dữ liệu song ngữ để lựa chọn bản dịch có khả năng phù hợp nhất với câu nguồn. Tuy nhiên, các phương pháp này vẫn gặp khó khăn trong việc mô hình hóa những phụ thuộc ngôn ngữ phức tạp và duy trì tính nhất quán về ngữ nghĩa trong các câu dài.
+
+Sự phát triển của học sâu đã tạo ra bước chuyển đáng kể trong lĩnh vực dịch máy. Đặc biệt, dịch máy nơ-ron (Neural Machine Translation -- NMT) sử dụng các mạng nơ-ron để học trực tiếp ánh xạ giữa ngôn ngữ nguồn và ngôn ngữ đích. Với khả năng học biểu diễn phân tán và mô hình hóa ngữ cảnh, NMT đã cải thiện đáng kể chất lượng dịch so với nhiều phương pháp trước đó. Các mô hình Transformer tiếp tục thúc đẩy sự phát triển này nhờ cơ chế tự chú ý (self-attention), cho phép mô hình hóa quan hệ giữa các vị trí trong chuỗi đầu vào một cách hiệu quả.
+
+Gần đây, sự xuất hiện của các mô hình ngôn ngữ lớn (Large Language Models -- LLMs) đã mở ra một hướng tiếp cận mới cho bài toán dịch máy. Được huấn luyện trên các tập dữ liệu văn bản quy mô lớn và có khả năng xử lý nhiều nhiệm vụ ngôn ngữ khác nhau, LLM có thể thực hiện dịch máy thông qua các chỉ dẫn bằng ngôn ngữ tự nhiên (prompting), thay vì bắt buộc phải xây dựng một mô hình chuyên biệt cho từng cặp ngôn ngữ. Khả năng học trong ngữ cảnh (in-context learning) cũng cho phép cung cấp các ví dụ hoặc thông tin hỗ trợ trực tiếp trong đầu vào nhằm định hướng quá trình sinh bản dịch.
+
+Các nghiên cứu thực nghiệm cho thấy LLM có tiềm năng đáng kể trong dịch máy đa ngôn ngữ, đặc biệt khi được cung cấp những chỉ dẫn phù hợp. Tuy nhiên, hiệu năng của các mô hình này không đồng đều giữa các ngôn ngữ và các hướng dịch khác nhau. Những cặp ngôn ngữ có nguồn tài nguyên phong phú thường đạt kết quả tốt hơn so với các cặp ngôn ngữ có ít dữ liệu huấn luyện hoặc ít xuất hiện trong quá trình phát triển mô hình \cite{zhu-etal-2024-multilingual}. Điều này cho thấy năng lực dịch máy của LLM vẫn chịu ảnh hưởng đáng kể từ sự phân bố dữ liệu ngôn ngữ trong quá trình huấn luyện.
+
+Một đặc điểm quan trọng của các LLM hiện đại là khả năng hỗ trợ dịch máy theo thiết lập đa ngôn ngữ (multilingual machine translation). Thay vì chỉ xử lý một cặp ngôn ngữ cố định, mô hình có thể được yêu cầu dịch giữa nhiều ngôn ngữ khác nhau trong cùng một hệ thống. Khi xét đến nhiều ngôn ngữ nguồn và nhiều ngôn ngữ đích, bài toán được mở rộng thành dịch máy nhiều-đến-nhiều (many-to-many machine translation). Trong thiết lập này, một mô hình cần có khả năng xử lý nhiều hướng dịch, bao gồm cả những hướng không có tiếng Anh ở vị trí ngôn ngữ nguồn hoặc ngôn ngữ đích.
+
+Tuy nhiên, việc hỗ trợ nhiều ngôn ngữ không đồng nghĩa với việc mô hình có năng lực dịch tương đương trên tất cả các hướng dịch. Các nghiên cứu cho thấy LLM thường có xu hướng thể hiện năng lực tốt hơn trên những hướng dịch liên quan đến tiếng Anh, trong khi hiệu năng dịch trực tiếp giữa hai ngôn ngữ không phải tiếng Anh còn nhiều hạn chế \cite{zhu-etal-2024-multilingual,yang-etal-2025-enanchored}. Hiện tượng này đặt ra yêu cầu nghiên cứu các phương pháp có khả năng khai thác tri thức đa ngôn ngữ sẵn có trong LLM, qua đó cải thiện chất lượng dịch trên các hướng dịch ít được hỗ trợ.
+
+Từ những đặc điểm trên, đồ án tập trung nghiên cứu bài toán dịch máy đa ngôn ngữ sử dụng LLM trong thiết lập many-to-many. Trọng tâm không chỉ là cải thiện chất lượng bản dịch được sinh ra, mà còn hướng đến việc khai thác hiệu quả thông tin liên ngôn ngữ và các biểu diễn nội tại của mô hình để nâng cao hiệu năng dịch trên nhiều hướng dịch khác nhau.
+
+\subsection{Những thách thức của bài toán dịch máy đa ngôn ngữ}
+\label{sec:multilingual_mt_challenges}
+
+Mặc dù các mô hình ngôn ngữ lớn đã đạt được những tiến bộ đáng kể trong xử lý ngôn ngữ tự nhiên, bài toán dịch máy đa ngôn ngữ vẫn tồn tại nhiều thách thức. Những thách thức này không chỉ xuất phát từ sự khác biệt về cấu trúc và ngữ nghĩa giữa các ngôn ngữ, mà còn liên quan đến sự mất cân bằng dữ liệu huấn luyện, khả năng chuyển giao tri thức liên ngôn ngữ và chi phí tính toán khi triển khai các phương pháp cải thiện chất lượng dịch.
+
+\subsubsection{Sự mất cân bằng về tài nguyên giữa các ngôn ngữ}
+
+Một trong những thách thức lớn nhất của dịch máy đa ngôn ngữ là sự phân bố không đồng đều của dữ liệu giữa các ngôn ngữ. Trong thực tế, các ngôn ngữ phổ biến như tiếng Anh thường có lượng dữ liệu văn bản và dữ liệu song ngữ lớn hơn đáng kể so với nhiều ngôn ngữ khác. Ngược lại, những ngôn ngữ có ít tài nguyên số hóa thường thiếu dữ liệu song ngữ chất lượng cao phục vụ quá trình huấn luyện và đánh giá.
+
+Sự mất cân bằng này ảnh hưởng trực tiếp đến năng lực của LLM. Do được huấn luyện trên các tập dữ liệu có phân bố không đồng đều, mô hình thường học được những biểu diễn và mối quan hệ ngôn ngữ phong phú hơn đối với các ngôn ngữ có tài nguyên lớn. Trong khi đó, đối với những ngôn ngữ ít xuất hiện, khả năng nhận diện ngữ nghĩa, xử lý cấu trúc cú pháp và sinh văn bản tự nhiên có thể bị suy giảm. Zhu và cộng sự \cite{zhu-etal-2024-multilingual} đã phân tích thực nghiệm năng lực dịch máy đa ngôn ngữ của LLM và chỉ ra rằng hiệu năng dịch có sự khác biệt đáng kể giữa các ngôn ngữ và các hướng dịch.
+
+Đặc biệt, sự mất cân bằng này thể hiện rõ trong thiết lập many-to-many. Một mô hình có thể đạt chất lượng tốt khi dịch từ một ngôn ngữ giàu tài nguyên sang các ngôn ngữ khác, nhưng lại gặp khó khăn khi thực hiện dịch trực tiếp giữa hai ngôn ngữ có mức độ hỗ trợ thấp. Điều này cho thấy việc mở rộng số lượng ngôn ngữ được hỗ trợ chưa đủ để bảo đảm năng lực dịch đồng đều trên toàn bộ không gian các hướng dịch.
+
+\subsubsection{Hạn chế của dịch trực tiếp giữa các ngôn ngữ không phải tiếng Anh}
+
+Một thách thức khác là hiện tượng thiên lệch tiếng Anh (English-centric bias) trong các mô hình ngôn ngữ lớn. Tiếng Anh thường đóng vai trò trung tâm trong dữ liệu huấn luyện cũng như trong khả năng biểu diễn và xử lý ngôn ngữ của nhiều LLM. Do đó, mô hình có thể khai thác tốt hơn những hướng dịch có liên quan đến tiếng Anh so với các hướng dịch trực tiếp giữa hai ngôn ngữ khác.
+
+Trong thiết lập many-to-many, hướng dịch từ ngôn ngữ nguồn $X$ sang ngôn ngữ đích $Y$, trong đó cả $X$ và $Y$ đều không phải tiếng Anh, thường được gọi là hướng dịch X2X. Các hướng dịch này có thể gặp nhiều khó khăn do mô hình không được hỗ trợ đầy đủ bởi dữ liệu song ngữ tương ứng. Đồng thời, khả năng chuyển giao tri thức giữa các ngôn ngữ cũng không phải lúc nào cũng hiệu quả.
+
+Yang và cộng sự \cite{yang-etal-2025-enanchored} đã nghiên cứu hiện tượng hạn chế của dịch trực tiếp X2X và đề xuất khai thác năng lực dịch vốn có của mô hình thông qua tiếng Anh làm ngôn ngữ neo (English-anchored). Kết quả nghiên cứu cho thấy việc tận dụng những hướng dịch có chất lượng tốt hơn có thể hỗ trợ cải thiện năng lực dịch giữa các ngôn ngữ khác.
+
+Tuy nhiên, việc phụ thuộc vào một ngôn ngữ trung tâm cũng đặt ra vấn đề về tính linh hoạt. Không phải mọi hướng dịch đều có thể đạt chất lượng tốt nhất khi sử dụng tiếng Anh làm ngôn ngữ trung gian. Do đó, cần có những phương pháp có khả năng lựa chọn và khai thác các ngôn ngữ trung gian phù hợp với từng hướng dịch cụ thể.
+
+\subsubsection{Hạn chế của phương pháp dịch thông qua một ngôn ngữ trung gian}
+
+Dịch máy thông qua ngôn ngữ trung gian (pivot-based machine translation) là một hướng tiếp cận nhằm giải quyết tình trạng thiếu dữ liệu song ngữ trực tiếp giữa một số cặp ngôn ngữ. Thay vì dịch trực tiếp từ ngôn ngữ nguồn $s$ sang ngôn ngữ đích $t$, hệ thống thực hiện quá trình dịch qua một ngôn ngữ trung gian $p$:
+
+\begin{equation}
+    s \rightarrow p \rightarrow t.
+\end{equation}
+
+Phương pháp này cho phép tận dụng các cặp dữ liệu song ngữ sẵn có giữa ngôn ngữ nguồn và ngôn ngữ trung gian, cũng như giữa ngôn ngữ trung gian và ngôn ngữ đích. Các nghiên cứu trước đây đã khai thác dịch qua pivot để cải thiện khả năng chuyển giao giữa những ngôn ngữ không có đủ dữ liệu song ngữ trực tiếp \cite{kim-etal-2019-pivot}.
+
+Mặc dù vậy, việc lựa chọn một ngôn ngữ trung gian cố định không phải lúc nào cũng mang lại hiệu quả tối ưu. Chất lượng của quá trình dịch qua pivot phụ thuộc vào nhiều yếu tố, bao gồm mức độ tương đồng giữa các ngôn ngữ, khả năng dịch của mô hình trên từng cặp ngôn ngữ và mức độ sẵn có của dữ liệu huấn luyện.
+
+Cụ thể, một ngôn ngữ trung gian có thể giúp cải thiện chất lượng dịch đối với một hướng dịch nhất định nhưng lại không mang lại lợi ích, thậm chí làm suy giảm chất lượng, đối với những hướng dịch khác. Ngoài ra, sai sót phát sinh trong bước dịch từ ngôn ngữ nguồn sang ngôn ngữ trung gian có thể tiếp tục được truyền sang bước dịch tiếp theo, dẫn đến hiện tượng tích lũy lỗi (error propagation).
+
+Mohammadshahi và cộng sự \cite{mohammadshahi-etal-2024-investigating} đã nghiên cứu việc kết hợp nhiều hướng dịch qua ngôn ngữ trung gian trong các mô hình dịch máy đa ngôn ngữ. Những kết quả này gợi mở tiềm năng của việc khai thác nhiều pivot thay vì chỉ phụ thuộc vào một ngôn ngữ trung gian duy nhất.
+
+Do đó, một vấn đề quan trọng cần giải quyết là làm thế nào để lựa chọn linh hoạt nhiều ngôn ngữ trung gian dựa trên chất lượng dịch thực tế, đồng thời xác định và loại bỏ những bản dịch trung gian có chất lượng thấp trước khi sử dụng chúng để hỗ trợ quá trình sinh bản dịch cuối cùng.
+
+\subsubsection{Chi phí tính toán và độ trễ suy luận}
+
+Bên cạnh những vấn đề liên quan đến chất lượng dịch, chi phí tính toán cũng là một thách thức đáng kể khi triển khai các phương pháp cải thiện dịch máy trên LLM.
+
+Một số phương pháp dựa trên tinh chỉnh mô hình (fine-tuning) yêu cầu lượng dữ liệu song ngữ lớn, tài nguyên GPU đáng kể và thời gian huấn luyện kéo dài. Chẳng hạn, các phương pháp tối ưu hóa đa ngôn ngữ có thể sử dụng dữ liệu được tăng cường và các kỹ thuật tối ưu hóa bổ sung để cải thiện chất lượng dịch giữa nhiều ngôn ngữ \cite{yang-etal-2025-enanchored,li-etal-2024-eliciting}. Mặc dù có thể mang lại những cải thiện đáng kể, việc triển khai các phương pháp này không phải lúc nào cũng khả thi trong điều kiện hạn chế tài nguyên tính toán.
+
+Đối với các phương pháp dựa trên prompting, việc bổ sung những bản dịch trung gian vào đầu vào có thể cung cấp thêm thông tin hữu ích cho mô hình. Tuy nhiên, để tạo ra các bản dịch này, hệ thống cần thực hiện nhiều lượt suy luận bổ sung. Khi số lượng ngôn ngữ trung gian tăng lên, tổng số lượt gọi mô hình và độ trễ xử lý cũng có xu hướng tăng theo.
+
+Đặc biệt, trong những ứng dụng yêu cầu dịch máy với số lượng lớn văn bản hoặc thời gian phản hồi thấp, chi phí suy luận bổ sung có thể trở thành một hạn chế quan trọng. Vì vậy, bên cạnh mục tiêu cải thiện chất lượng bản dịch, cần nghiên cứu những phương pháp có khả năng duy trì lợi ích của thông tin đa ngôn ngữ nhưng không làm gia tăng đáng kể chi phí trong giai đoạn suy luận.
+
+\subsubsection{Khó khăn trong việc khai thác biểu diễn nội tại của LLM}
+
+Các LLM không chỉ lưu trữ tri thức ngôn ngữ trong tham số mô hình mà còn xử lý thông tin thông qua những biểu diễn nội tại được hình thành trong các lớp Transformer. Những biểu diễn này chứa thông tin về ngữ nghĩa, ngôn ngữ và các đặc trưng liên quan đến quá trình sinh văn bản.
+
+Các nghiên cứu về cơ chế hoạt động của LLM đa ngôn ngữ cho thấy một số thành phần bên trong mô hình có vai trò chuyên biệt hoặc được chia sẻ trong quá trình xử lý các ngôn ngữ khác nhau \cite{tang-etal-2024-language,Zhang_Lai_Liu_She_Liu_Gong_Huang_Chen_2026}. Bên cạnh đó, các nghiên cứu về cơ chế dịch máy của LLM cũng cho thấy những thành phần attention và MLP nhất định có thể tham gia xử lý các tín hiệu liên quan đến quá trình dịch \cite{zhang2026exploring}.
+
+Những phát hiện này mở ra khả năng cải thiện hành vi của LLM thông qua việc can thiệp trực tiếp vào các biểu diễn nội tại thay vì chỉ thay đổi đầu vào hoặc tinh chỉnh toàn bộ tham số mô hình. Tuy nhiên, việc xác định chính xác những thành phần có ảnh hưởng đến chất lượng dịch và xây dựng cơ chế điều chỉnh biểu diễn phù hợp vẫn là một vấn đề nghiên cứu đáng quan tâm.
+
+Đặc biệt, một câu hỏi quan trọng được đặt ra là liệu những lợi ích thu được từ việc cung cấp các bản dịch trung gian thông qua prompting có thể được chuyển hóa thành những thay đổi trong không gian biểu diễn nội tại của LLM hay không. Nếu có thể thực hiện được điều này, mô hình sẽ có khả năng khai thác những tín hiệu hỗ trợ dịch mà không cần trực tiếp tạo ra các bản dịch trung gian trong mỗi lần suy luận.
+
+Từ các thách thức trên, có thể thấy rằng việc cải thiện dịch máy đa ngôn ngữ cần đồng thời giải quyết hai vấn đề: nâng cao chất lượng dịch thông qua khai thác thông tin liên ngôn ngữ và giảm chi phí tính toán khi triển khai. Đây chính là cơ sở cho định hướng nghiên cứu của đồ án.
+
+\subsection{Động lực nghiên cứu}
+\label{sec:research_motivation}
+
+Từ những hạn chế đã phân tích, đồ án được định hướng giải quyết bài toán nâng cao chất lượng dịch máy đa ngôn ngữ của các mô hình ngôn ngữ lớn, đặc biệt đối với những hướng dịch trực tiếp giữa hai ngôn ngữ không phải tiếng Anh. Định hướng nghiên cứu xuất phát từ ba động lực chính: khai thác thông tin từ nhiều ngôn ngữ trung gian, lựa chọn thông tin hỗ trợ dựa trên chất lượng dịch và chuyển hóa lợi ích của prompting thành các thay đổi trong biểu diễn nội tại của mô hình.
+
+\subsubsection{Khai thác nhiều ngôn ngữ trung gian thay vì phụ thuộc vào một pivot cố định}
+
+Như đã trình bày, dịch thông qua ngôn ngữ trung gian có thể hỗ trợ những hướng dịch gặp khó khăn do thiếu dữ liệu song ngữ trực tiếp. Tuy nhiên, việc chỉ sử dụng một pivot cố định chưa khai thác hết tiềm năng chuyển giao tri thức giữa các ngôn ngữ.
+
+Trên thực tế, mỗi ngôn ngữ trung gian có thể cung cấp những thông tin khác nhau cho quá trình dịch. Một pivot có thể giúp bảo toàn tốt hơn ý nghĩa của câu nguồn, trong khi một pivot khác có thể tạo ra cách diễn đạt tự nhiên hơn trong ngôn ngữ đích. Vì vậy, việc kết hợp thông tin từ nhiều pivot có tiềm năng cung cấp một tập hợp các tín hiệu ngữ nghĩa, từ vựng và cú pháp phong phú hơn so với việc chỉ sử dụng một bản dịch trung gian.
+
+Đây là động lực đầu tiên dẫn đến phương pháp Multi-Pivot Prompting (MPP) được đề xuất trong bài báo gốc của đồ án. Thay vì lựa chọn một ngôn ngữ trung gian cố định cho tất cả các hướng dịch, MPP thực hiện lựa chọn pivot một cách linh hoạt dựa trên chất lượng dịch ước lượng của từng hướng chuyển đổi.
+
+Cụ thể, phương pháp đánh giá các đường dịch dạng:
+
+\begin{equation}
+    s \rightarrow p \rightarrow t,
+\end{equation}
+
+trong đó $s$ là ngôn ngữ nguồn, $t$ là ngôn ngữ đích và $p$ là một ngôn ngữ trung gian ứng viên. Dựa trên chất lượng của hai bước dịch, hệ thống xác định những pivot có tiềm năng mang lại kết quả tốt cho hướng dịch đang xét.
+
+Sau khi lựa chọn, mô hình tạo ra các bản dịch thông qua những pivot khác nhau. Các bản dịch này được đánh giá chất lượng và chỉ những ứng viên có chất lượng phù hợp mới được giữ lại làm thông tin tham chiếu bổ trợ. Nhờ đó, mô hình có thể tận dụng nhiều góc nhìn ngôn ngữ khác nhau trong quá trình tạo bản dịch cuối cùng, đồng thời hạn chế ảnh hưởng của các bản dịch trung gian kém chất lượng.
+
+Động lực này phù hợp với những nghiên cứu trước đây về kết hợp nhiều ngôn ngữ trung gian trong dịch máy đa ngôn ngữ \cite{mohammadshahi-etal-2024-investigating}, đồng thời mở rộng hướng tiếp cận bằng cơ chế lựa chọn, lọc và tổng hợp các ứng viên pivot dựa trên chất lượng dịch.
+
+\subsubsection{Tận dụng khả năng đánh giá chất lượng để giảm nhiễu từ bản dịch trung gian}
+
+Việc sử dụng nhiều ngôn ngữ trung gian có thể tạo ra nhiều bản dịch ứng viên, nhưng không phải tất cả các ứng viên đều chứa thông tin hữu ích. Một bản dịch trung gian sai lệch có thể khiến mô hình hiểu sai ngữ nghĩa của câu nguồn hoặc lựa chọn cách diễn đạt không phù hợp.
+
+Do đó, nếu đưa toàn bộ các bản dịch trung gian vào prompt mà không có cơ chế đánh giá, hệ thống có thể chịu ảnh hưởng tiêu cực từ những ứng viên chất lượng thấp. Điều này đặc biệt đáng quan tâm trong bối cảnh các LLM có khả năng sinh ra những bản dịch trôi chảy về mặt ngôn ngữ nhưng không hoàn toàn chính xác về nội dung.
+
+Từ đó, đồ án đặt ra yêu cầu xây dựng cơ chế đánh giá chất lượng bản dịch không phụ thuộc vào bản dịch tham chiếu (reference-free quality estimation). Trong bài báo gốc, COMETKiwi-DA được sử dụng để đánh giá chất lượng các bản dịch trung gian. Một ứng viên pivot chỉ được giữ lại khi điểm chất lượng của nó cao hơn điểm của bản dịch trực tiếp tương ứng.
+
+Cơ chế này giúp hệ thống chỉ sử dụng những thông tin trung gian có khả năng mang lại lợi ích thực sự, thay vì mặc định rằng việc bổ sung thêm bản dịch luôn cải thiện kết quả. Đồng thời, việc cung cấp điểm chất lượng đi kèm với các bản dịch tham chiếu giúp LLM có thêm cơ sở để ưu tiên những ứng viên đáng tin cậy trong quá trình sinh bản dịch cuối cùng.
+
+Như vậy, động lực nghiên cứu không chỉ dừng lại ở việc tăng số lượng ngôn ngữ trung gian, mà còn hướng đến việc khai thác thông tin một cách có chọn lọc, dựa trên chất lượng và mức độ hữu ích của từng ứng viên.
+
+\subsubsection{Chuyển hóa lợi ích của prompting thành biểu diễn nội tại của LLM}
+
+Mặc dù MPP có khả năng cải thiện chất lượng dịch bằng cách bổ sung các bản dịch trung gian, phương pháp này vẫn yêu cầu nhiều lượt suy luận để tạo ra các ứng viên pivot. Điều đó dẫn đến chi phí tính toán và độ trễ lớn hơn so với phương pháp dịch trực tiếp.
+
+Đây là động lực thứ hai và cũng là một trong những vấn đề trọng tâm của đồ án: liệu có thể tái hiện những lợi ích mà MPP mang lại mà không cần thực hiện các lượt dịch trung gian trong giai đoạn suy luận hay không?
+
+Để giải quyết vấn đề này, đồ án khai thác hướng tiếp cận điều chỉnh biểu diễn nội tại (activation steering). Thay vì can thiệp trực tiếp vào toàn bộ trọng số của LLM hoặc bổ sung thêm thông tin vào prompt tại thời điểm suy luận, phương pháp này điều chỉnh các giá trị kích hoạt (activations) của những thành phần được xác định là có liên quan đến quá trình xử lý thông tin dịch máy.
+
+Các nghiên cứu về mechanistic interpretability và activation steering đã cho thấy khả năng kiểm soát hành vi của mô hình thông qua việc can thiệp vào các biểu diễn nội tại \cite{rimsky-etal-2024-steering,li2023inference,zou2023representation}. Trong lĩnh vực dịch máy, những nghiên cứu về cơ chế hoạt động của attention heads và các lớp MLP cũng cung cấp cơ sở để xác định những thành phần quan trọng đối với quá trình chuyển đổi ngôn ngữ \cite{zhang2026exploring}.
+
+Dựa trên những cơ sở đó, bài báo gốc đề xuất Multi-Pivot Representation Steering (MPRS). Phương pháp này trước tiên xác định các thành phần nội tại có liên quan đến sự khác biệt giữa Direct Prompting và Multi-Pivot Prompting. Sau đó, một mạng perceptron đa lớp (Multilayer Perceptron -- MLP) có kích thước nhỏ được huấn luyện để điều chỉnh biểu diễn của các thành phần này theo hướng gần hơn với những biểu diễn gắn với các bản dịch được tạo ra bởi MPP.
+
+Điểm quan trọng của phương pháp là trong giai đoạn suy luận, MPRS chỉ sử dụng prompt dịch trực tiếp và thực hiện điều chỉnh activation thông qua các MLP đã được huấn luyện. Nhờ đó, mô hình có thể khai thác những tín hiệu đã được học từ MPP mà không cần tạo ra các bản dịch pivot bổ sung trong mỗi lần dịch.
+
+Hướng tiếp cận này tạo ra sự kết hợp giữa hai mục tiêu: duy trì lợi ích về chất lượng dịch của thông tin đa pivot và hạn chế chi phí suy luận phát sinh từ quá trình tạo các bản dịch trung gian.
+
+\subsubsection{Kết hợp cải thiện chất lượng dịch và hiệu quả suy luận}
+
+Từ hai hướng tiếp cận MPP và MPRS, đồ án hướng đến việc nghiên cứu một khuôn khổ cải thiện dịch máy đa ngôn ngữ có khả năng cân bằng giữa chất lượng bản dịch và hiệu quả tính toán.
+
+MPP đóng vai trò khai thác thông tin từ nhiều hướng dịch trung gian, cung cấp các bản dịch tham chiếu bổ trợ và tạo ra những tín hiệu có chất lượng cao hơn cho quá trình sinh bản dịch. Trong khi đó, MPRS hướng đến việc học và lưu giữ một phần lợi ích của những tín hiệu này trong biểu diễn nội tại của mô hình.
+
+Hai phương pháp có mối quan hệ bổ trợ: MPP cung cấp cơ sở để tạo ra các bản dịch mục tiêu giả và những tín hiệu biểu diễn phục vụ quá trình huấn luyện MPRS; MPRS tiếp tục khai thác những tín hiệu đã học để cải thiện dịch trực tiếp trong giai đoạn suy luận.
+
+Động lực nghiên cứu tổng thể được minh họa trong Hình~\ref{fig:research_motivation}, thể hiện mối quan hệ giữa phương pháp dịch trực tiếp, phương pháp Multi-Pivot Prompting và phương pháp Multi-Pivot Representation Steering.
+
+% Nếu đã có hình teaser từ bài báo gốc, có thể sử dụng lại hình này.
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=\textwidth]{figures/teaser.pdf}
+%     \caption{So sánh giữa Direct Prompting, Multi-Pivot Prompting
+%     và Multi-Pivot Representation Steering.}
+%     \label{fig:research_motivation}
+% \end{figure}
+
+Thông qua định hướng trên, đồ án không chỉ tập trung cải thiện chất lượng dịch máy ở mức đầu ra, mà còn nghiên cứu khả năng khai thác cơ chế xử lý bên trong LLM. Đây là cơ sở để xây dựng các phương pháp dịch máy đa ngôn ngữ vừa có chất lượng tốt, vừa có khả năng triển khai hiệu quả hơn.
+
+\subsection{Mục tiêu và đóng góp của đồ án}
+\label{sec:objectives_contributions}
+
+\subsubsection{Mục tiêu nghiên cứu}
+
+Mục tiêu tổng quát của đồ án là nghiên cứu và đề xuất các phương pháp cải thiện chất lượng dịch máy đa ngôn ngữ sử dụng mô hình ngôn ngữ lớn, đặc biệt trong thiết lập many-to-many, thông qua việc khai thác nhiều ngôn ngữ trung gian và điều chỉnh biểu diễn nội tại của mô hình.
+
+Để đạt được mục tiêu tổng quát, đồ án tập trung vào các mục tiêu cụ thể sau:
+
+\begin{itemize}
+    \item \textbf{Nghiên cứu bài toán dịch máy đa ngôn ngữ sử dụng LLM:}
+    Phân tích những hạn chế của các phương pháp dịch trực tiếp, đặc biệt đối với các hướng dịch X2X, đồng thời nghiên cứu vai trò của dữ liệu đa ngôn ngữ và khả năng chuyển giao tri thức giữa các ngôn ngữ.
+
+    \item \textbf{Xây dựng phương pháp khai thác nhiều ngôn ngữ trung gian:}
+    Nghiên cứu cơ chế lựa chọn các pivot phù hợp cho từng hướng dịch dựa trên chất lượng dịch ước lượng, tạo các bản dịch ứng viên và tổng hợp những thông tin có ích để hỗ trợ quá trình sinh bản dịch cuối cùng.
+
+    \item \textbf{Nghiên cứu cơ chế phân tích biểu diễn nội tại của LLM:}
+    Xác định những thành phần attention heads và MLP layers có liên quan đến quá trình xử lý các bản dịch trung gian, từ đó tìm hiểu sự khác biệt về biểu diễn giữa phương pháp dịch trực tiếp và phương pháp sử dụng nhiều pivot.
+
+    \item \textbf{Đề xuất phương pháp điều chỉnh biểu diễn nội tại:}
+    Xây dựng cơ chế Multi-Pivot Representation Steering sử dụng các mạng MLP có kích thước nhỏ để điều chỉnh activation, nhằm khai thác lợi ích của MPP mà không cần thực hiện thêm các lượt sinh bản dịch trung gian khi suy luận.
+
+    \item \textbf{Đánh giá thực nghiệm và phân tích kết quả:}
+    Tiến hành đánh giá các phương pháp đề xuất trên nhiều mô hình ngôn ngữ lớn và nhiều hướng dịch thuộc bộ dữ liệu FLORES-200. So sánh với các phương pháp cơ sở, phân tích hiệu quả của từng thành phần và đánh giá sự cân bằng giữa chất lượng dịch và chi phí suy luận.
+\end{itemize}
+
+\subsubsection{Đối tượng và phạm vi nghiên cứu}
+
+Đối tượng nghiên cứu của đồ án là các mô hình ngôn ngữ lớn có khả năng xử lý đa ngôn ngữ và thực hiện nhiệm vụ dịch máy thông qua chỉ dẫn bằng ngôn ngữ tự nhiên. Trọng tâm nghiên cứu là khả năng cải thiện chất lượng dịch trực tiếp giữa nhiều cặp ngôn ngữ thông qua thông tin từ các ngôn ngữ trung gian và cơ chế điều chỉnh biểu diễn nội tại.
+
+Về phạm vi thực nghiệm, bài báo gốc tiến hành đánh giá trên bộ dữ liệu FLORES-200 \cite{nllbteam2022languageleftbehindscaling}, với 10 ngôn ngữ đại diện gồm:
+
+\begin{itemize}
+    \item Tiếng Anh (English -- en).
+    \item Tiếng Đức (German -- de).
+    \item Tiếng Pháp (French -- fr).
+    \item Tiếng Hà Lan (Dutch -- nl).
+    \item Tiếng Ý (Italian -- it).
+    \item Tiếng Tây Ban Nha (Spanish -- es).
+    \item Tiếng Bồ Đào Nha (Portuguese -- pt).
+    \item Tiếng Hàn (Korean -- ko).
+    \item Tiếng Nga (Russian -- ru).
+    \item Tiếng Trung (Chinese -- zh).
+\end{itemize}
+
+Với 10 ngôn ngữ trên, nghiên cứu xem xét 90 hướng dịch có thứ tự, không bao gồm các trường hợp dịch một ngôn ngữ sang chính nó. Thiết lập này cho phép đánh giá khả năng tổng quát hóa của phương pháp trên nhiều hướng dịch khác nhau, bao gồm cả những hướng dịch có tiếng Anh và những hướng dịch X2X.
+
+Các mô hình được sử dụng trong bài báo gốc bao gồm Llama-3-8B-Instruct \cite{llama3modelcard}, Qwen2.5-7B-Instruct \cite{qwen2.5} và Qwen3.5-9B \cite{qwen3.5}. Việc lựa chọn các mô hình thuộc những dòng kiến trúc khác nhau nhằm đánh giá khả năng áp dụng của phương pháp trên các nền tảng LLM khác nhau.
+
+Về đánh giá chất lượng dịch, nghiên cứu sử dụng hai chỉ số BLEURT \cite{sellam-etal-2020-bleurt} và COMET \cite{rei-etal-2022-comet}. Đây là các chỉ số đánh giá dựa trên mô hình học sâu, tập trung vào mức độ tương đồng về ngữ nghĩa giữa bản dịch được sinh ra và bản dịch tham chiếu.
+
+Phạm vi nghiên cứu tập trung vào việc cải thiện chất lượng dịch máy thông qua prompting và activation steering, không hướng đến việc xây dựng một mô hình ngôn ngữ lớn mới hoặc huấn luyện lại toàn bộ trọng số của mô hình nền.
+
+\subsubsection{Các đóng góp chính của đồ án}
+
+Dựa trên những mục tiêu và phạm vi nghiên cứu đã xác định, đồ án kế thừa và phát triển các đóng góp chính được trình bày trong bài báo gốc. Các đóng góp được chia thành ba hướng chính:
+
+\textbf{Thứ nhất, đề xuất phương pháp Multi-Pivot Prompting (MPP) cho dịch máy đa ngôn ngữ.}
+
+MPP là một phương pháp dựa trên prompting, không yêu cầu tinh chỉnh mô hình nền, nhằm cải thiện chất lượng dịch trong thiết lập many-to-many thông qua việc khai thác linh hoạt nhiều ngôn ngữ trung gian.
+
+Phương pháp bao gồm ba giai đoạn chính:
+
+\begin{enumerate}
+    \item \textbf{Lựa chọn pivot (Pivot Selection):}
+    Ước lượng chất lượng dịch giữa các cặp ngôn ngữ, từ đó xác định những ngôn ngữ trung gian phù hợp cho từng hướng dịch nguồn--đích.
+
+    \item \textbf{Sinh các bản dịch ứng viên (Pivot Candidate Generation):}
+    Thực hiện dịch hai bước thông qua các pivot đã lựa chọn, đồng thời tạo bản dịch trực tiếp để hình thành tập hợp các ứng viên dịch.
+
+    \item \textbf{Lọc và tổng hợp ứng viên (Candidate Aggregation):}
+    Sử dụng phương pháp ước lượng chất lượng không cần bản dịch tham chiếu để loại bỏ các ứng viên kém chất lượng, sau đó lựa chọn những bản dịch trung gian phù hợp làm thông tin tham chiếu bổ trợ cho quá trình sinh bản dịch cuối cùng.
+\end{enumerate}
+
+Điểm nổi bật của MPP là thay vì phụ thuộc vào một ngôn ngữ trung gian cố định, phương pháp có thể khai thác nhiều pivot dựa trên chất lượng dịch ước lượng của từng hướng dịch cụ thể. Điều này giúp tận dụng thông tin bổ trợ từ nhiều ngôn ngữ và hạn chế ảnh hưởng của những bản dịch trung gian không đáng tin cậy.
+
+\textbf{Thứ hai, đề xuất phương pháp Multi-Pivot Representation Steering (MPRS) nhằm giảm chi phí suy luận.}
+
+MPRS là phương pháp điều chỉnh biểu diễn nội tại được xây dựng dựa trên những tín hiệu thu được từ MPP. Phương pháp trước tiên phân tích sự khác biệt giữa các biểu diễn được kích hoạt bởi Direct Prompting và Multi-Pivot Prompting, từ đó xác định những thành phần có liên quan đến việc xử lý các bản dịch ứng viên.
+
+Trên cơ sở đó, MPRS sử dụng các mạng MLP nhẹ để học phép biến đổi activation tại những thành phần được lựa chọn. Trong giai đoạn suy luận, mô hình chỉ cần sử dụng đầu vào dịch trực tiếp và áp dụng các phép biến đổi đã học, thay vì tạo thêm các bản dịch qua nhiều pivot.
+
+Đóng góp này hướng đến việc chuyển hóa lợi ích của phương pháp prompting thành những thay đổi trong không gian biểu diễn của LLM, qua đó cải thiện chất lượng dịch mà không làm phát sinh thêm các lượt suy luận để tạo bản dịch trung gian.
+
+\textbf{Thứ ba, thực hiện đánh giá thực nghiệm và phân tích cơ chế hoạt động của các phương pháp đề xuất.}
+
+Đồ án tiến hành đánh giá MPP và MPRS trên 90 hướng dịch thuộc bộ dữ liệu FLORES-200, sử dụng nhiều mô hình ngôn ngữ lớn và các chỉ số đánh giá chất lượng dịch khác nhau.
+
+Bên cạnh việc so sánh với các phương pháp cơ sở, nghiên cứu còn thực hiện các thí nghiệm loại bỏ thành phần (ablation study) nhằm đánh giá vai trò của chiến lược lựa chọn pivot, trọng số đánh giá chất lượng và kiến trúc mạng steering MLP.
+
+Ngoài ra, nghiên cứu phân tích những thành phần nội tại của LLM có liên quan đến việc xử lý thông tin đa pivot. Qua đó, đồ án không chỉ đánh giá hiệu quả ở mức đầu ra mà còn cung cấp góc nhìn về cách thức các tín hiệu hỗ trợ dịch được xử lý và khai thác trong biểu diễn nội tại của mô hình.
+
+\subsubsection{Kết quả nghiên cứu và công bố khoa học}
+
+Các phương pháp được trình bày trong đồ án đã được phát triển và đánh giá trong khuôn khổ nghiên cứu khoa học, với nội dung được thể hiện trong bài báo có tiêu đề:
+
+\begin{center}
+    \textbf{Multi-Pivot Prompting and Multi-Pivot Representation Steering for Multilingual Machine Translation}
+\end{center}
+
+Bài báo nghiên cứu hai hướng tiếp cận bổ trợ cho nhau: Multi-Pivot Prompting nhằm cải thiện chất lượng dịch thông qua việc khai thác nhiều ngôn ngữ trung gian và Multi-Pivot Representation Steering nhằm giảm chi phí suy luận bằng cách điều chỉnh các biểu diễn nội tại của LLM.
+
+\textbf{Bài báo đã được chấp nhận (accepted) tại hội nghị European Chapter of the Association for Computational Linguistics (EACL) 2027.} Đây là một dấu mốc quan trọng trong quá trình nghiên cứu, thể hiện việc các phương pháp đề xuất đã trải qua quá trình đánh giá khoa học và được chấp nhận để công bố tại một hội nghị quốc tế trong lĩnh vực xử lý ngôn ngữ tự nhiên.
+
+Về kết quả thực nghiệm, trên mô hình Llama-3-8B-Instruct, MPP đạt điểm trung bình 70.52 BLEURT và 84.91 COMET, cải thiện lần lượt 4.74 điểm BLEURT và 4.14 điểm COMET so với phương pháp dịch trực tiếp. Trên Qwen2.5-7B-Instruct, MPP đạt 71.02 BLEURT và 85.30 COMET, tương ứng cải thiện 4.09 điểm BLEURT và 3.18 điểm COMET so với phương pháp cơ sở dịch trực tiếp.
+
+Đối với MPRS, phương pháp đạt 68.46 BLEURT và 82.91 COMET trên Llama-3-8B-Instruct, trong khi đạt 70.00 BLEURT và 84.82 COMET trên Qwen2.5-7B-Instruct. Các kết quả này cho thấy MPRS có khả năng cải thiện chất lượng dịch so với dịch trực tiếp, đồng thời giữ được lợi thế về hiệu quả suy luận do không cần tạo thêm các bản dịch trung gian trong quá trình dịch.
+
+Những kết quả trên là cơ sở thực nghiệm quan trọng để chứng minh tiềm năng của việc kết hợp thông tin đa pivot với cơ chế điều chỉnh biểu diễn nội tại trong dịch máy đa ngôn ngữ.
+
+Thông qua đồ án, các nội dung nghiên cứu được hệ thống hóa từ cơ sở lý thuyết, phân tích bài toán, phương pháp đề xuất đến thiết kế thực nghiệm và đánh giá kết quả. Qua đó, đồ án hướng đến việc làm rõ cả giá trị ứng dụng lẫn cơ sở khoa học của hai phương pháp MPP và MPRS đối với bài toán dịch máy sử dụng các mô hình ngôn ngữ lớn.

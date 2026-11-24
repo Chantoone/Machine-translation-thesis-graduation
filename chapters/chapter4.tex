@@ -1,0 +1,63 @@
+\section{ỨNG DỤNG DỊCH TÀI LIỆU ĐA NGÔN NGỮ}
+\label{sec:ung-dung-dich-da-ngon-ngu}
+
+\subsection{Giới thiệu ứng dụng}
+
+Bên cạnh việc nghiên cứu phương pháp dịch máy đa ngôn ngữ ở các chương trước, đồ án xây dựng một ứng dụng web minh họa quy trình dịch tài liệu có bố cục. Người dùng tải lên một tệp PDF hoặc ảnh, chọn ngôn ngữ nguồn và ngôn ngữ đích, sau đó xem tài liệu gốc bên cạnh bản PDF đã dịch và tải kết quả về. Về mặt thiết kế, hệ thống hướng tới nhiều cặp ngôn ngữ nguồn--đích, bao gồm cả các hướng không đi qua tiếng Anh. Ứng dụng phục vụ tình huống cần đọc một tài liệu mà thông tin nằm trong cả nội dung chữ lẫn cách trình bày trên trang.
+
+Trong thiết kế của hệ thống dịch, hai phương pháp được đề xuất ở Chương 3 được áp dụng vào bước tạo bản dịch sau khi trích xuất chữ. MPP tạo các bản dịch tham chiếu qua nhiều ngôn ngữ trung gian và tổng hợp chúng để hỗ trợ bản dịch cuối. MPRS điều hướng biểu diễn nội tại của mô hình khi dịch trực tiếp nhằm khai thác tín hiệu học từ MPP mà không cần tạo các bản dịch trung gian lúc suy luận. Hai nhánh có thể được dùng để đối chiếu chất lượng và chi phí xử lý trên cùng các vùng chữ của tài liệu.
+
+\subsection{Phân tích và thiết kế hệ thống}
+
+\subsubsection{Thu thập yêu cầu}
+
+\textbf{Mô tả bằng ngôn ngữ tự nhiên.} Tác nhân chính là người dùng cần dịch tài liệu giữa hai ngôn ngữ được hệ thống hỗ trợ. Đầu vào là một tệp PDF, PNG, JPG hoặc JPEG có dung lượng tối đa 10\,MB. Người dùng chọn ngôn ngữ nguồn $s$, đồng thời là ngôn ngữ nhận dạng OCR, và ngôn ngữ đích $t$ với $s\ne t$. Trong thiết kế đa ngôn ngữ, tập ngôn ngữ $\mathcal{L}$ có thể mở rộng; mỗi hướng dịch $(s,t)$ được xử lý theo cùng một giao diện vùng chữ và bản dịch. Đầu ra là một tệp PDF chứa phần chữ đã dịch trong bố cục trang gốc ở mức gần đúng.
+
+Các chức năng chính gồm tải tệp, xem bản gốc, trích xuất chữ hoặc OCR, dịch theo vùng, ghép bản dịch vào trang, xem bản dịch và tải PDF. Hệ thống cần thông báo lỗi khi thiếu tệp, định dạng hoặc kích thước không hợp lệ, PDF quá số trang, không tìm thấy chữ, đầu ra dịch thiếu vùng chữ hoặc sai định dạng.
+
+\textbf{Ca sử dụng ``Dịch tài liệu''.} Điều kiện ban đầu là ứng dụng đã chạy và tài liệu đầu vào hợp lệ. Luồng chính như sau:
+
+\begin{enumerate}
+    \item Người dùng chọn tệp và cặp ngôn ngữ nguồn--đích.
+    \item Người dùng nhấn nút ``OCR và dịch''; hệ thống kiểm tra đầu vào và hiển thị ngay bản gốc.
+    \item Hệ thống lần lượt trích xuất các vùng chữ trên từng trang. Với trang PDF có chữ và không chứa ảnh, hệ thống đọc chữ trực tiếp từ PDF; với ảnh hoặc trang PDF có ảnh hay thiếu lớp chữ, hệ thống nhận dạng bằng OCR.
+    \item Theo thiết kế áp dụng phương pháp đề xuất, các vùng chữ được đưa vào nhánh MPP hoặc MPRS để tạo bản dịch, sau đó ghép lại theo đúng thứ tự vùng ban đầu.
+    \item Hệ thống che chữ nguồn, chèn chữ đích vào trang và tạo PDF đầu ra.
+    \item Người dùng xem hai bản cạnh nhau và tải PDF bản dịch.
+\end{enumerate}
+
+Nếu không chọn tệp hoặc chọn hai ngôn ngữ giống nhau, hệ thống dừng trước khi xử lý. Nếu đầu ra dịch thiếu vùng, trùng mã vùng hoặc sai định dạng, hệ thống cần báo lỗi để tránh ghép nhầm nội dung vào PDF. Nếu một đoạn dịch không vừa chỗ, trang hiển thị ký hiệu tham chiếu; nội dung đầy đủ được thêm vào phần ``Bản dịch bổ sung'' ở cuối tài liệu.
+
+\subsubsection{Thiết kế hệ thống}
+
+Theo thiết kế áp dụng phương pháp đề xuất, hệ thống gồm giao diện Gradio, bộ xử lý tài liệu và khối dịch máy. Giao diện nhận tệp, lựa chọn ngôn ngữ và hiển thị tiến độ. Bộ xử lý kiểm tra đầu vào, đọc hoặc OCR, quản lý vùng chữ và dàn trang PDF. Khối dịch máy nhận các vùng chữ có mã định danh, thực hiện MPP hoặc MPRS và trả bản dịch tương ứng. Dữ liệu đi qua các khối theo trình tự:
+
+Để mở rộng sang nhiều ngôn ngữ, danh sách chọn ngôn ngữ nguồn phải gắn với mã dữ liệu OCR tương ứng; danh sách ngôn ngữ đích phải gắn với khả năng sinh của mô hình dịch. Với MPP, tập pivot ứng viên được xác định theo từng hướng dịch là $\mathcal{L}\setminus\{s,t\}$, sau đó chọn các pivot phù hợp theo phương pháp ở Chương 3. Với MPRS, mỗi hướng dịch cần dùng các mạng điều hướng đã được huấn luyện hoặc kiểm chứng cho hướng đó. Việc thêm một tên ngôn ngữ vào giao diện, tự nó, chưa bảo đảm chất lượng OCR hay chất lượng dịch.
+
+\begin{center}
+\fbox{Tệp và cặp ngôn ngữ}
+$\longrightarrow$ \fbox{Trích xuất chữ/OCR}
+$\longrightarrow$ \fbox{Dịch bằng MPP/MPRS}
+$\longrightarrow$ \fbox{Dàn trang PDF}
+$\longrightarrow$ \fbox{Xem và tải kết quả}.
+\end{center}
+
+Đối tượng dữ liệu trung tâm là \texttt{Region}, gồm tọa độ vùng, nội dung chữ, các dòng chữ, kích thước, màu chữ, màu nền và độ tin cậy OCR. Tọa độ cho phép đặt bản dịch gần vị trí ban đầu; màu chữ và màu nền hỗ trợ duy trì hình thức trang ở mức ước lượng. Mã triển khai chính nằm trong \texttt{app/main.py}; các thao tác trích xuất vùng OCR và dựng lại trang nằm trong \texttt{app/document\_layout.py}.
+
+Với PDF có lớp chữ phù hợp, ứng dụng đọc các khối văn bản và tọa độ bằng PyMuPDF. Với ảnh và các trang PDF cần OCR, trang được dựng thành ảnh ở 250 DPI; ảnh quá lớn được giới hạn tối đa 5\,000 pixel mỗi chiều trước khi đưa vào Tesseract. Chế độ \texttt{PSM 11} tìm chữ rải rác trên trang. Vùng có độ tin cậy thấp được thử nhận dạng lại trên ảnh cắt bằng \texttt{PSM 7}; những dòng gần nhau, thẳng hàng và có dấu hiệu nối câu được ghép thành vùng lớn hơn. Cách ghép theo vị trí giúp hạn chế trộn chữ giữa các cột.
+
+Mỗi vùng chữ được gắn mã định danh để kết quả dịch có thể ghép lại đúng vị trí trên trang. Trong nhánh MPP, hệ thống lựa chọn các ngôn ngữ trung gian, tạo bản dịch ứng viên qua từng pivot, lọc các ứng viên phù hợp rồi dùng chúng làm tham chiếu khi tạo bản dịch đích. Trong nhánh MPRS, hệ thống dịch trực tiếp từ ngôn ngữ nguồn sang ngôn ngữ đích; tại các thành phần đã lựa chọn, mạng điều hướng biến đổi activation trong quá trình sinh từng token. Các mạng điều hướng phải được huấn luyện trước bằng mục tiêu biểu diễn lấy từ MPP như Chương 3 trình bày. Sau khi dịch, kết quả của mỗi vùng được kiểm tra theo mã định danh trước khi dàn trang. Khâu kiểm tra này bảo đảm ánh xạ vùng chữ, nhưng không thay thế đánh giá chất lượng ngữ nghĩa.
+
+Khi dàn trang, hệ thống che vùng chữ nguồn và chèn bản dịch bằng PyMuPDF, đồng thời tránh các vùng chữ kề bên. Chữ mới có giới hạn thu nhỏ tối thiểu 7\,pt. Nếu vẫn không đủ chỗ, bản dịch đầy đủ được đưa vào các trang bổ sung ở cuối PDF. Cách làm này giữ được cấu trúc trang, ảnh và vị trí tương đối của nội dung, nhưng không bảo đảm tái tạo chính xác phông chữ hay nền có họa tiết.
+
+\subsection{Triển khai và kết quả chương trình}
+
+Giao diện được bố trí trên một trang web. Phía trên là vùng tải tệp, hai danh sách chọn ngôn ngữ và nút ``OCR và dịch''. Phía dưới gồm hai khung xem song song: ``Tài liệu gốc'' và ``Bản dịch theo bố cục'', tiếp theo là thành phần tải PDF kết quả. Sau khi người dùng bắt đầu xử lý, bản gốc xuất hiện trước; ứng dụng cập nhật tiến độ theo trang và hiển thị bản dịch khi hoàn tất. Bản giao diện trong thư mục \texttt{app} hiện chỉ liệt kê tiếng Anh và tiếng Việt, nên phần hỗ trợ nhiều hướng dịch trong chương này là thiết kế mở rộng, chưa phải chức năng đã triển khai cho các ngôn ngữ khác.
+
+Trong quá trình chạy, hệ thống ghi thời gian trích xuất/OCR, dịch theo lô và dàn trang vào log. Bộ nhớ đệm trong RAM lưu tối đa 16 tài liệu đã xử lý và 256 lô dịch gần nhất trong mã ứng dụng hiện tại để tránh xử lý lại cùng đầu vào và cấu hình. Trong mã hiện tại, việc đổi nội dung, cặp ngôn ngữ hoặc cấu hình mô hình tạo khóa bộ nhớ đệm khác. Đây là giới hạn số mục lưu, không phải kết quả đo hiệu năng hay bảo đảm thời gian phản hồi.
+
+Kết quả chức năng của ứng dụng là một PDF có thể xem và tải về. Với trang có vùng chữ đủ rộng, bản dịch nằm tại vị trí gần vùng chữ nguồn. Với vùng thiếu chỗ, PDF bổ sung phần nội dung ở cuối tài liệu theo số trang và số mục để người đọc đối chiếu. Chất lượng hiển thị phụ thuộc vào độ rõ của ảnh, khả năng OCR và độ dài bản dịch; mã nguồn chưa cung cấp số liệu định lượng về độ chính xác OCR, chất lượng dịch hoặc thời gian xử lý trung bình. Chưa có số liệu thực nghiệm của hai nhánh MPP và MPRS trên ứng dụng tài liệu; cần triển khai và đánh giá riêng trước khi kết luận về chất lượng của từng nhánh.
+
+\subsection{Kết luận chương}
+
+Chương 4 đã trình bày yêu cầu, kiến trúc, luồng xử lý và giao diện của ứng dụng dịch tài liệu đa ngôn ngữ. Thiết kế kết hợp trích xuất chữ, OCR, hai phương pháp MPP/MPRS và dựng lại PDF để người dùng đối chiếu tài liệu gốc với bản dịch trong cùng một giao diện. Hướng phát triển tiếp theo là mở rộng tập ngôn ngữ OCR và các hướng dịch, đánh giá định lượng trên nhiều loại tài liệu, đồng thời hiện thực hai nhánh MPP và MPRS trong mã ứng dụng để kiểm chứng tác động của chúng ở cấp độ tài liệu.

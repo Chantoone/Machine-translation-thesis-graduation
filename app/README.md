@@ -1,13 +1,15 @@
 # Demo OCR và dịch tài liệu
 
-Web demo một trang: tải PDF/PNG/JPG lên, xem tài liệu gốc cạnh PDF đã dịch và tải PDF bản dịch giữ bố cục. Bản dịch được ghép theo vùng, giữ màu chữ và nền ước lượng từ ảnh. Chữ mới không bị thu nhỏ dưới 7 pt. Nếu thiếu chỗ, vùng được đánh dấu [n] và nội dung đầy đủ nằm trong phần “Bản dịch bổ sung” cuối PDF (ghi rõ trang và mục). Không bảo đảm khôi phục chính xác font hoặc nền có họa tiết.
+Web demo một trang: tải PDF/PNG/JPG lên, xem bản tóm tắt bằng ngôn ngữ đích do LLM tạo từ nội dung OCR, xem tài liệu gốc khi cần đối chiếu và tải PDF bản dịch giữ bố cục. Bản dịch được ghép theo vùng, giữ màu chữ và nền ước lượng từ ảnh. Chữ dịch tự co để vừa vùng; vùng có nhiều chữ có thể hiển thị rất nhỏ. Không bảo đảm khôi phục chính xác font hoặc nền có họa tiết.
 
 ## Chạy trên Linux (Ubuntu/Debian)
 
 1. Cài Python 3.10+ và Tesseract cùng dữ liệu ngôn ngữ OCR cần dùng. Ví dụ Ubuntu/Debian:
 
    ```bash
-   sudo apt-get install tesseract-ocr tesseract-ocr-vie tesseract-ocr-eng
+   sudo apt-get install tesseract-ocr tesseract-ocr-vie tesseract-ocr-eng \
+     tesseract-ocr-chi-sim tesseract-ocr-kor tesseract-ocr-jpn \
+     tesseract-ocr-fra tesseract-ocr-deu fonts-noto-cjk
    ```
 
 2. Cài thư viện. Tạo `app/.env` với `CLAUDE_API_KEY=...`. Có thể thêm `CLAUDE_MODEL` và `CLAUDE_BASE_URL` (xem `.env.example`).
@@ -24,14 +26,14 @@ Web demo một trang: tải PDF/PNG/JPG lên, xem tài liệu gốc cạnh PDF �
 
 ## Chạy trên Windows (PowerShell)
 
-1. Cài Python 3.10+ và Tesseract OCR. Khi cài Tesseract, chọn thêm dữ liệu ngôn ngữ **English** và **Vietnamese**, đồng thời thêm thư mục chứa `tesseract.exe` vào biến môi trường `Path`. Mở lại PowerShell và kiểm tra:
+1. Cài Python 3.10+ và Tesseract OCR. Khi cài Tesseract, chọn dữ liệu ngôn ngữ **English, Vietnamese, Chinese Simplified, Korean, Japanese, French, German** cho những ngôn ngữ nguồn cần OCR. Cài font hỗ trợ chữ Trung, Hàn, Nhật để PDF hiển thị bản dịch. Thêm thư mục chứa `tesseract.exe` vào biến môi trường `Path`. Mở lại PowerShell và kiểm tra:
 
    ```powershell
    tesseract --version
    tesseract --list-langs
    ```
 
-   Danh sách ngôn ngữ cần có `eng` và `vie`.
+   Danh sách ngôn ngữ tương ứng là `eng`, `vie`, `chi_sim`, `kor`, `jpn`, `fra`, `deu`. Chỉ cần cài dữ liệu OCR cho các ngôn ngữ dùng làm nguồn; ngôn ngữ đích không cần dữ liệu Tesseract.
 
 2. Tạo `app/.env` với `CLAUDE_API_KEY=...` (có thể thêm `CLAUDE_MODEL` và `CLAUDE_BASE_URL`). Từ thư mục gốc dự án, cài thư viện và chạy app:
 
@@ -50,7 +52,7 @@ Web demo một trang: tải PDF/PNG/JPG lên, xem tài liệu gốc cạnh PDF �
 
 - Dịch theo lô tối đa 40 vùng / 4.000 ký tự, ánh xạ bằng ID và kiểm tra đủ kết quả trước khi ghép PDF. Vùng dài được chia theo câu hoặc khoảng trắng; chỉ token đơn dài quá giới hạn mới bị cắt cứng. Không gộp các chuỗi trùng nhau ở các ngữ cảnh khác nhau. Các lô chạy tuần tự để hạn chế vượt hạn mức API.
 - Tái sử dụng client; timeout mạng 45 giây và tối đa một lần thử lại của SDK. Kết quả sai JSON/ID được thử lại một lần ở mức ứng dụng, sau đó báo lỗi. Đây không phải giới hạn thời gian tổng của tài liệu.
-- Cache trong RAM: 16 tài liệu và 256 lô dịch gần nhất; thay đổi nội dung, ngôn ngữ, model, endpoint hoặc API key sẽ dùng khóa cache khác. Khởi động lại ứng dụng để xóa cache. Cache tài liệu giữ cả dữ liệu đầu vào và PDF đầu ra nên cần tính RAM khi triển khai nhiều người dùng.
+- Cache trong RAM: 16 kết quả OCR và 16 bản tóm tắt theo nội dung file và cặp ngôn ngữ, 16 PDF đã dịch và 256 lô dịch gần nhất. Đổi ngôn ngữ đích với cùng file và ngôn ngữ nguồn sẽ dùng lại OCR; ứng dụng tạo bản tóm tắt và PDF dịch theo ngôn ngữ đích mới. Đổi nội dung file hoặc ngôn ngữ nguồn sẽ OCR lại. Cache tóm tắt, PDF và lô dịch còn phụ thuộc vào model, endpoint và API key. Khởi động lại ứng dụng để xóa cache. Các cache giữ dữ liệu đầu vào và PDF đầu ra trong RAM nên cần tính bộ nhớ khi triển khai nhiều người dùng.
 - OCR dùng Tesseract PSM 11, PDF render ở 250 DPI, ảnh giới hạn 5.000 pixel mỗi chiều. Có timeout 60 giây; vùng tin cậy thấp được thử lại bằng crop PSM 7 và đảo nền tối. Ảnh xử lý hướng EXIF; chưa tự sửa mọi góc nghiêng của scan. Ghép dòng theo tọa độ, khoảng cách và dấu hiệu tiếp nối câu để tránh trộn cột.
 - Prompt có thuật ngữ kỹ thuật Anh–Việt và tên riêng của mẫu SceneSearch. Cần điều chỉnh thuật ngữ cho lĩnh vực khác; kiểm tra ID không thay thế đánh giá ngữ nghĩa của người đọc.
 - Hiển thị bản gốc ngay, cập nhật tiến độ từng trang và ghi thời gian OCR, dịch, dàn trang trong terminal.

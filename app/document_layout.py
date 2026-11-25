@@ -133,7 +133,6 @@ def render_regions(page, regions, translations):
         for line in region.lines:
             page.add_redact_annot(line + (-.7,-.7,.7,.7), fill=region.background)
     page.apply_redactions(images=0, graphics=0)
-    overflow = []
     for region, text in changed:
         rect = pymupdf.Rect(region.rect)
         # Grow into available space, stopping before adjacent columns/rows.
@@ -157,31 +156,6 @@ def render_regions(page, regions, translations):
                f'color:{css_color(region.foreground)}; line-height:1.15;}} '
                'body {margin:0;padding:0;}')
         safe = html.escape(text).replace('\n','<br>')
-        spare, scale = page.insert_htmlbox(rect,safe,css=css,scale_low=min(1,7/size))
+        spare, scale = page.insert_htmlbox(rect, safe, css=css, scale_low=0)
         if spare < 0:
-            # No unreadably small text: keep full text in readable appendix.
-            overflow.append((region.text,text))
-            page.insert_htmlbox(rect, f'[{len(overflow)}]',
-                                css=f'* {{font-family:sans-serif;font-size:7pt;color:{css_color(region.foreground)};}} body {{margin:0;padding:0;}}',
-                                scale_low=1)
-    return overflow
-
-
-def append_overflow(document, entries):
-    if not entries:
-        return
-    story = pymupdf.Story(html='<h1>Bản dịch bổ sung</h1>'+''.join(
-        f'<h3>Trang {page}, mục {index}</h3><p>{html.escape(text)}</p>'
-        for page,index,text in entries), user_css='body {font-family:sans-serif;font-size:11pt;}')
-    import io
-    buffer = io.BytesIO()
-    writer = pymupdf.DocumentWriter(buffer)
-    more = True
-    while more:
-        device = writer.begin_page(pymupdf.Rect(0,0,595,842))
-        more,_ = story.place(pymupdf.Rect(40,40,555,802))
-        story.draw(device)
-        writer.end_page()
-    writer.close()
-    with pymupdf.open(stream=buffer.getvalue(),filetype='pdf') as extra:
-        document.insert_pdf(extra)
+            raise ValueError('Không thể đặt bản dịch vào một vùng chữ quá nhỏ.')
